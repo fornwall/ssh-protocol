@@ -47,13 +47,6 @@ separated by commas, with no empty element. The zero-length string represents an
 empty list. Compare algorithm names as exact protocol identifiers; do not trim,
 case-fold, or normalize them.
 
-```mermaid
-flowchart LR
-    L["uint32 length<br/>00 00 00 03"] --> B1["0x63<br/>c"]
-    B1 --> B2["0x61<br/>a"]
-    B2 --> B3["0x74<br/>t"]
-```
-
 ## One payload, one message number
 
 The first byte of an SSH packet's payload is its message number. The remaining
@@ -93,6 +86,25 @@ flowchart LR
     S -->|"50 during userauth"| U["interpret as userauth message"]
     S -->|"unknown here"| X["send UNIMPLEMENTED"]
 ```
+
+### Transport control messages
+
+Four generic messages can appear across several transport states:
+
+- `SSH_MSG_DISCONNECT` ends the SSH connection and supplies a reason code;
+- `SSH_MSG_IGNORE` carries bytes with no higher-layer meaning;
+- `SSH_MSG_DEBUG` carries peer-controlled diagnostic text; and
+- `SSH_MSG_UNIMPLEMENTED` reports an unrecognized message by packet sequence
+  number.
+
+A disconnect description and debug message are not trusted terminal text.
+They may explain a failure, but the numeric reason and the state in which the
+message arrived are stronger evidence.
+
+`SSH_MSG_SERVICE_REQUEST` and `SSH_MSG_SERVICE_ACCEPT` cross a layer boundary.
+After initial key exchange, the client normally requests `ssh-userauth`. A
+successful authentication request names the service to start next, normally
+`ssh-connection`. A service name is not a channel type.
 
 ## The base packet layout
 
@@ -165,6 +177,43 @@ At a black-box level:
 A protected packet has protocol meaning only after its MAC or authentication tag
 has been verified. Decrypted bytes from a packet with a bad tag are not an SSH
 message.
+
+### Packet-protection families
+
+The negotiated names determine when packet bytes become trustworthy. Three
+families are common:
+
+| Family | Integrity covers | Receiver consequence |
+| --- | --- | --- |
+| RFC 4253 encrypt-and-MAC | Sequence number and plaintext packet | Decrypt enough to recover the packet, then verify the MAC. |
+| Encrypt-then-MAC | Sequence number, clear packet length, and ciphertext | Verify the ciphertext before decrypting the packet body. |
+| AEAD | Algorithm-defined ciphertext and associated data | Accept plaintext only if the authentication tag verifies. |
+
+Encrypt-then-MAC algorithm names end in `-etm@openssh.com`; their packet
+construction is documented in the
+[OpenSSH protocol extensions](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL).
+AEAD mappings such as AES-GCM define their own length, nonce, and tag handling.
+There is no universal “modern SSH packet” layout beyond the base fields.
+
+This distinction matters when reading a trace. A visible length may be an
+authenticated cleartext field in one mode, encrypted state in another, or
+handled by a separate algorithm-specific construction. Packet boundaries are
+not trusted merely because a tentative length was recovered.
+
+### Compression changes payloads, not channels
+
+Compression applies to message payloads before packet protection and after
+packet verification. Its state is directional. The base `zlib` method starts
+after `NEWKEYS`; the deployed `zlib@openssh.com` method delays compression
+until user authentication succeeds, reducing exposure of decompression code
+to unauthenticated traffic.
+
+[RFC 8308](https://www.rfc-editor.org/rfc/rfc8308#section-3.2) also defines the
+`delay-compression` extension. After authentication succeeds, the server starts
+compressing its direction after sending `SSH_MSG_USERAUTH_SUCCESS`. The client
+then sends `SSH_MSG_NEWCOMPRESS` uncompressed and compresses later packets in
+its direction. These methods use the same compression algorithm but have
+different transition rules.
 
 ## Sequence numbers
 
@@ -254,3 +303,5 @@ Use the worked packet to check the following:
   SSH packet change?
 - After keys are active, at what point do the recovered plaintext bytes become
   an authenticated SSH message?
+- Why can packet-length handling differ between encrypt-and-MAC,
+  encrypt-then-MAC, and AEAD?

@@ -6,14 +6,9 @@ has a boundary.
 
 ## The chain of claims
 
-```mermaid
-flowchart LR
-    Stream["Reliable byte stream"] --> KEX["Authenticated key exchange"]
-    KEX --> Host["Trusted server identity"]
-    Host --> Protected["Confidential and<br/>integrity-protected packets"]
-    Protected --> User["Authenticated user"]
-    User --> Policy["Authorized channels<br/>and forwarding"]
-```
+The claims build in order: reliable stream, signed key exchange, trusted
+server identity, protected packets, authenticated user, and authorized channel
+operations.
 
 Breaking any link changes what later success means. A password sent through an
 encrypted tunnel is not safe if the tunnel terminates at an attacker. A valid
@@ -27,20 +22,15 @@ security considerations of every algorithm-specific RFC.
 ## What the network attacker can do
 
 Before host authentication completes, assume an active network attacker can
-read, change, delete, delay, or replace the traffic. SSH detects modification
-by binding the version strings, algorithm proposals, key-exchange values, and
-host key into the signed exchange hash.
+read, change, delete, delay, or replace traffic. If the attacker changes a
+covered value while relaying one exchange, the endpoints form different
+exchange hashes and signature verification fails.
 
-```mermaid
-flowchart TD
-    A["Attacker alters a covered handshake value"] --> C["Client and server form different exchange hashes"]
-    C --> V["Host-key signature verification fails"]
-    V --> X["Connection must not continue"]
-```
-
-This prevents an invisible downgrade of the signed algorithm proposals. It
-does not prevent denial of service: an attacker can always drop the TCP
-connection or corrupt a packet and make SSH stop.
+A full machine-in-the-middle can instead run two self-consistent exchanges and
+sign the client-facing exchange with its own host key. The destination-to-key
+trust check must reject that key. Together, transcript binding and host-key
+trust prevent an invisible downgrade of signed proposals. Neither prevents
+denial of service: an attacker can always drop the connection.
 
 After keys are active, confidentiality hides packet contents and integrity
 protection detects changes. Packet authentication does not guarantee delivery;
@@ -51,14 +41,6 @@ the peer or network can still stop sending.
 The key-exchange signature proves control of the private key corresponding to
 the presented host key. A separate trust rule binds that key to the destination
 the user intended.
-
-```mermaid
-flowchart LR
-    Sig["Valid signature under<br/>presented host key"] --> Both{"Both true?"}
-    Trust["Host key trusted for<br/>requested destination"] --> Both
-    Both -- yes --> Accept["Server authenticated"]
-    Both -- no --> Reject["Reject before credentials"]
-```
 
 Trust on first use can detect a later key change, but it cannot identify an
 attacker present on the first connection. A changed key can be a legitimate
@@ -76,13 +58,9 @@ The authenticated negotiation can still select a weak algorithm if both peers
 offer it and client policy prefers or permits it. Transcript integrity cannot
 repair unsafe policy.
 
-```mermaid
-flowchart TD
-    Implemented["Algorithm name understood"] --> Allowed["Allowed by local policy"]
-    Allowed --> Offered["Offered on this connection"]
-    Offered --> Mutual["Also offered by peer"]
-    Mutual --> Selected["Selected by client preference"]
-```
+An implementation may understand an algorithm without enabling or offering
+it. Of the offered algorithms, only mutual names can be selected. Client
+preference chooses among those names.
 
 Registration is not endorsement. The
 [IANA SSH registries](https://www.iana.org/assignments/ssh-parameters/ssh-parameters.xhtml)
@@ -93,7 +71,7 @@ implementation recommendations.
 ## Forward secrecy and rekeying
 
 Ephemeral key agreement means later theft of the server's long-term host key
-should not reveal old recorded session keys. This is forward secrecy. It
+should not reveal old recorded traffic keys. This is forward secrecy. It
 depends on fresh ephemeral secrets being generated and discarded.
 
 Rekeying creates new traffic keys for a live connection. It limits the amount
@@ -143,14 +121,7 @@ leave the client or signing agent.
 
 ## Channels cross new trust boundaries
 
-Connection-layer encryption ends at the SSH endpoints.
-
-```mermaid
-flowchart LR
-    App["Local application"] --> C["SSH client"]
-    C == "SSH-protected channel" ==> S["SSH server"]
-    S --> T["Forwarding target"]
-```
+Connection-layer protection ends at the SSH endpoints.
 
 For a `direct-tcpip` channel, traffic from the server to the target is not
 protected by SSH unless that application protocol supplies its own protection.

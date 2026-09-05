@@ -67,6 +67,44 @@ Do not expect debug lines to be protocol packets one-for-one. A client may log
 one decision after processing several packets, and one SSH packet may trigger
 several log entries.
 
+### A compact annotated trace
+
+The following synthetic excerpt uses OpenSSH-like wording. It is not a literal
+wire dump, and real versions include more detail.
+
+```text
+Connection established.
+Local version string SSH-2.0-OpenSSH_X
+Remote protocol version 2.0, remote software version OpenSSH_Y
+kex: algorithm: curve25519-sha256
+kex: host key algorithm: ssh-ed25519
+Server host key: ssh-ed25519 SHA256:example
+Host 'example.test' is known and matches the ED25519 host key.
+kex: server->client cipher: ...
+kex: client->server cipher: ...
+Authentications that can continue: publickey,password
+Offering public key: ...
+Authenticated to example.test using "publickey".
+Entering interactive session.
+Sending command: printf "hello from the server\n"
+Exit status 0
+```
+
+Read it as evidence, not as a packet list:
+
+| Log evidence | Protocol conclusion |
+| --- | --- |
+| Both version strings | Identification exchange completed. |
+| KEX and host-key names | Both `KEXINIT` proposals had a usable match. |
+| Host key matches | Signature proof and local trust policy both passed. |
+| Directional cipher lines | New packet-protection algorithms were selected. |
+| Methods can continue | The server rejected or answered an authentication request and supplied current policy choices. |
+| Authenticated | The client received `SSH_MSG_USERAUTH_SUCCESS`. |
+| Command and exit status | A session channel accepted `exec` and later reported status 0. |
+
+The log does not show every `NEWKEYS`, channel-window update, EOF, or CLOSE.
+Absence from the log is not absence from the protocol.
+
 ## Inspect supported algorithms
 
 OpenSSH can list locally supported algorithm names without connecting:
@@ -81,13 +119,8 @@ ssh -Q mac
 “Supported” is not the same as “enabled by default,” “negotiated,” or “safe for
 new deployments.” This distinction becomes central during KEXINIT negotiation.
 
-```mermaid
-flowchart LR
-    S["Compiled support<br/>ssh -Q"] --> E["Enabled by policy"]
-    E --> O["Offered to peer"]
-    O --> M["Mutual algorithms"]
-    M --> N["One negotiated choice"]
-```
+Keep four sets distinct: supported, enabled by policy, offered to the peer,
+and selected for this connection.
 
 ## What a packet capture can show
 

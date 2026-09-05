@@ -1,12 +1,19 @@
 # SSH Protocol Course
 
-An [mdBook](https://rust-lang.github.io/mdBook/) course about SSH at both levels: how to use it safely and effectively, and how the protocol works on the wire.
+An [mdBook](https://rust-lang.github.io/mdBook/) course about the SSH protocol
+from the client's point of view.
 
 ## What is SSH?
 
-Secure Shell (SSH) is a cryptographic network protocol for securely operating a remote computer over an untrusted network. It is most familiar as a tool for interactive shell access, but one encrypted connection can also carry commands, file transfers, TCP forwarding, and multiple independent channels. SSH authenticates the server, can authenticate the user with public-key cryptography, and protects the confidentiality and integrity of the session.
+Secure Shell (SSH) is a cryptographic network protocol for operating a remote
+computer over an untrusted network. One protected connection can carry
+commands, file-transfer protocols, TCP forwarding, and multiple independent
+channels.
 
-SSH version 2 is divided into three layers: the transport layer establishes encryption and authenticates the server, the user authentication layer proves the client's identity, and the connection layer multiplexes shells, commands, forwarding, and other channels.
+SSH version 2 has three layers. The transport layer negotiates packet
+protection and supplies a signed server host-key proof. The user-authentication
+layer authorizes access to a requested account. The connection layer
+multiplexes sessions, forwarding, and other channels.
 
 ## Read and build
 
@@ -34,6 +41,7 @@ Mermaid is configured as an mdBook preprocessor, and its browser assets are kept
 - [RFC 8709 — Ed25519 and Ed448 Host Key Algorithms](https://www.rfc-editor.org/rfc/rfc8709)
 - [RFC 9142 — Key Exchange Method Updates and Recommendations](https://www.rfc-editor.org/rfc/rfc9142)
 - [RFC 9519 — SSH Registry Requirements](https://www.rfc-editor.org/rfc/rfc9519)
+- [RFC 9941 — Hybrid sntrup761/X25519 Key Exchange](https://www.rfc-editor.org/rfc/rfc9941)
 - [RFC 10042 — ML-KEM Hybrid Key Exchange for SSH](https://www.rfc-editor.org/rfc/rfc10042)
 - [Strict KEX Internet-Draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-strict-kex/)
 - [IANA SSH Protocol Parameters](https://www.iana.org/assignments/ssh-parameters/ssh-parameters.xhtml)
@@ -51,9 +59,9 @@ For a general overview and history, see [Secure Shell on Wikipedia](https://en.w
 
 ## Status
 
-The first course path now covers the protocol from identification through a
-command-running channel, with security analysis and trace-based debugging.
-Deployment is intentionally left for a future change.
+The course covers identification, packet framing, negotiation, key exchange,
+host and user authentication, sessions, forwarding, security analysis, and
+trace-based diagnosis.
 
 ## License
 

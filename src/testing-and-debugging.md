@@ -1,8 +1,7 @@
 # Reading traces and diagnosing failures
 
-A useful SSH trace is not just a list of log lines. It is a reconstruction of
-which protocol state each peer believed it was in, which direction a message
-moved, and which security properties were active at that moment.
+An SSH trace should reconstruct each peer's protocol state, message direction,
+and active security properties. A list of log lines is only source material.
 
 ## Three views of one connection
 
@@ -40,9 +39,9 @@ timeline
 ```
 
 The last completed boundary narrows the failure dramatically. For example, a
-host-key warning occurs after the peers found compatible algorithms and the
-client could validate the exchange signature, but before it accepted the
-server identity or sent credentials.
+host-key warning shows that negotiation reached presentation and trust checking
+of the host key. It does not prove whether signature verification happened
+first; clients may order those two checks differently.
 
 ## Keep observations and inferences separate
 
@@ -61,13 +60,6 @@ from the wire, you would need both complete proposals.
 Similarly, seeing ciphertext after `NEWKEYS` proves that protected packet bytes
 were exchanged, not that user authentication or a command succeeded.
 
-```mermaid
-flowchart TD
-    O["Observed fact"] --> R["Protocol rule"]
-    R --> I["Explicit inference"]
-    I --> Q["What additional evidence<br/>would confirm it?"]
-```
-
 ## TCP segments are not SSH packets
 
 A capture tool presents TCP segments according to where it observed the
@@ -75,19 +67,9 @@ stream. SSH packet boundaries can cross segments, and one segment can contain
 several SSH packets. Retransmissions are TCP behavior and do not mean SSH
 processed the same logical bytes twice.
 
-```mermaid
-flowchart LR
-    S1["TCP segment 1<br/>packet A prefix"] --> Stream["Reassembled byte stream"]
-    S2["TCP segment 2<br/>rest of A + packet B"] --> Stream
-    S3["TCP retransmission<br/>overlapping bytes"] --> Stream
-    Stream --> A["SSH packet A"]
-    Stream --> B["SSH packet B"]
-```
-
-Before binary packets, the identification exchange is line-oriented. The first
-byte after the server identification line's LF belongs to the binary stream.
-Keeping that transition visible prevents a pre-banner line or coalesced first
-packet from being misread.
+Before binary packets, each direction is line-oriented. After either endpoint
+sends its identification line, its next byte begins the binary stream in that
+direction. The two directions can cross this boundary at different times.
 
 ## Diagnose by boundary
 

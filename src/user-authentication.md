@@ -1,21 +1,19 @@
 # User authentication
 
-Once the encrypted transport is active and the server's host key is trusted, the client can ask the server to authenticate a user. This phase answers a different question from host verification:
+Once the protected transport is active and the server's host key is trusted,
+the client can ask the server to authenticate a user. This phase answers a
+different question from host verification:
 
 - **Server authentication:** is this the intended server?
 - **User authentication:** may this peer act as a particular account?
 
-The SSH user-authentication protocol runs inside the confidentiality- and integrity-protected transport. Its framework and core methods are specified by [RFC 4252](https://www.rfc-editor.org/rfc/rfc4252.html); generic interactive exchanges are specified by [RFC 4256](https://www.rfc-editor.org/rfc/rfc4256.html).
-
-## Learning objectives
-
-After this chapter, you should be able to:
-
-- enter the `ssh-userauth` service and construct an authentication request;
-- interpret failure, partial success, and the server's next-method list;
-- trace the `none`, `publickey`, `password`, and `keyboard-interactive` flows;
-- explain why a public-key signature does not encrypt anything; and
-- keep secrets and untrusted server text safe at the user-interface boundary.
+This course assumes that client policy requires confidentiality and integrity
+before user authentication. The SSH framework has a `none` cipher for unusual
+configurations. A safe client does not use password authentication without
+confidentiality. [RFC 4252](https://www.rfc-editor.org/rfc/rfc4252.html)
+specifies the authentication framework and core methods;
+[RFC 4256](https://www.rfc-editor.org/rfc/rfc4256.html) specifies the generic
+interactive method.
 
 ## Entering the authentication service
 
@@ -25,7 +23,7 @@ After key exchange, the client requests the `ssh-userauth` service using the tra
 sequenceDiagram
     participant C as Client
     participant S as Server
-    Note over C,S: Encrypted, integrity-protected transport is active
+    Note over C,S: Confidentiality and integrity are active
     C->>S: SSH_MSG_SERVICE_REQUEST("ssh-userauth")
     S-->>C: SSH_MSG_SERVICE_ACCEPT("ssh-userauth")
     C->>S: SSH_MSG_USERAUTH_REQUEST
@@ -161,15 +159,43 @@ The key blob and signature algorithm are related but not always named alike. For
 
 [RFC 8709](https://www.rfc-editor.org/rfc/rfc8709.html) specifies `ssh-ed25519` and `ssh-ed448`, whose keys are used only for signing. These signatures prove possession; they do not encrypt the request or channel data.
 
-```mermaid
-flowchart TD
-    UserKey["User signing key"] --> Proof["Signature: proves private-key possession"]
-    Proof --> Auth["Server authorization decision"]
-    SessionKeys["Transport session keys"] --> Cipher["Encryption: hides SSH packets"]
-    Cipher --> Protected["Protected authentication and channel traffic"]
-```
-
 A private-key *passphrase* is also distinct from the account password. The passphrase usually decrypts a local private-key file or unlocks a signing device. It should not be placed in an SSH userauth packet. A signing agent can return a signature without disclosing the private key to the SSH client.
+
+### Discovering acceptable signature algorithms
+
+The server can send the `server-sig-algs` extension in
+`SSH_MSG_EXT_INFO`. Its value is a name-list of public-key algorithms that the
+server can process in a `publickey` authentication request.
+
+This is especially useful for RSA keys. The stored key blob can still use the
+`ssh-rsa` format while the authentication signature uses `rsa-sha2-256` or
+`rsa-sha2-512`. The extension lets the client choose a usable signature
+algorithm without trying each one as an authentication attempt.
+
+The extension describes protocol capability, not account authorization. A
+listed algorithm can still fail because the key is not authorized, a required
+factor is missing, or server policy rejects the request. If the extension is
+absent, the client cannot infer that a particular algorithm is unsupported.
+
+[RFC 8308, Section 3.1](https://www.rfc-editor.org/rfc/rfc8308.html#section-3.1)
+defines `server-sig-algs` and its timing.
+
+### Host-bound public-key authentication
+
+Agent forwarding lets a remote host ask an agent to sign a standard userauth
+request for another SSH connection. The session identifier binds that request
+to the new connection, but it does not tell the agent which server host key
+the connection accepted.
+
+OpenSSH's deployed `publickey-hostbound-v00@openssh.com` method adds the
+initial server host key to the signed request. A compatible agent can then
+apply destination constraints using both the userauth request and the server
+identity. This narrows delegated signing authority; it does not make a
+compromised server harmless.
+
+This is an OpenSSH extension, not a core RFC 4252 method. Servers advertise it
+through extension information. Its wire format is documented in the
+[OpenSSH protocol extensions](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL).
 
 ## Password authentication
 
@@ -184,20 +210,16 @@ boolean   FALSE
 string    plaintext password
 ```
 
-“Plaintext” describes the field before transport protection. The entire packet is encrypted by the already-established SSH transport. The password is not hashed by this authentication method, and hashing it in the client would merely create a password-equivalent value unless the server protocol were designed around that transformation.
-
-```mermaid
-flowchart LR
-    Password["Password bytes"] --> Packet["USERAUTH_REQUEST payload"]
-    Packet --> Transport["SSH transport encryption + integrity"]
-    Transport --> Wire["Ciphertext packet on network"]
-    Wire --> Decrypt["Server transport decrypts"]
-    Decrypt --> Check["Server checks password policy/database"]
-```
+“Plaintext” describes the field before transport protection. With the safe
+policy assumed here, the transport encrypts the complete packet. This method
+does not hash the password. Hashing it in the client would only create a
+password-equivalent value unless the server protocol expected that value.
 
 The server may send `SSH_MSG_USERAUTH_PASSWD_CHANGEREQ` for an expired password. A retry with the boolean set to true carries both the old and new passwords. [RFC 4252, Section 8](https://www.rfc-editor.org/rfc/rfc4252.html#section-8) gives the complete formats and response meanings.
 
-> **Safety note:** Password authentication should be disabled if the transport does not provide confidentiality. A password, old or new, is secret even though the wire layout calls it a plaintext field; transport protection changes how it crosses the network, not its sensitivity at either endpoint.
+> **Safety note:** RFC 4252 recommends disabling password authentication when
+> the transport does not provide confidentiality. A password, old or new, is
+> secret even though the wire layout calls it a plaintext field.
 
 Password authentication is one request with one password field. It is not the same wire protocol as keyboard-interactive, even when both cause a terminal to display `Password:`.
 

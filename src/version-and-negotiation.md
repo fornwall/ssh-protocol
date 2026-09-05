@@ -1,155 +1,18 @@
-# Version exchange and algorithm negotiation
+# Algorithm negotiation
 
-Before SSH can encrypt a byte, the peers must answer two questions:
+After identification, the peers choose the algorithms that will protect the
+connection. Each endpoint sends an ordered proposal in `SSH_MSG_KEXINIT`.
+Both then apply the same deterministic selection rule.
 
-1. Do we speak compatible versions of the SSH protocol?
-2. Which algorithms will we use for this connection?
+This chapter assumes the binary types and packet framing from
+[SSH binary packets and data types](./binary-packets.md). The next chapter
+introduces the cryptographic operations used by the selected algorithms.
 
-This chapter follows those decisions from the first cleartext line through
-`SSH_MSG_KEXINIT`. The next chapter, [Key exchange](./key-exchange.md), runs the
-chosen key-exchange method and turns its output into traffic keys.
+## `SSH_MSG_KEXINIT` carries proposals
 
-The normative foundation is [RFC 4253, Sections 4 and
-7](https://www.rfc-editor.org/rfc/rfc4253.html#section-4). Extension negotiation
-was added later by [RFC 8308](https://www.rfc-editor.org/rfc/rfc8308.html).
-
-## Learning objectives
-
-By the end of this chapter, you should be able to:
-
-- recognise an SSH identification exchange without mistaking a pre-banner for the
-  protocol line;
-- explain why identification strings are security-relevant even though they
-  are sent in cleartext;
-- read the name-lists in `SSH_MSG_KEXINIT`;
-- calculate the selected algorithm in every category;
-- distinguish real key-exchange methods from negotiation markers such as
-  `ext-info-c`; and
-- describe what extension negotiation and strict key exchange change.
-
-## From text to binary
-
-The SSH transport begins in an unusual way: one line-oriented text exchange is
-followed immediately by a binary packet protocol.
-
-```mermaid
-stateDiagram-v2
-    [*] --> ByteStream: transport connected
-    ByteStream --> Identification: read lines
-    Identification --> BinaryPackets: both SSH identification lines known
-    BinaryPackets --> Negotiated: both KEXINIT packets known
-    Negotiated --> KeyExchange: run selected KEX method
-```
-
-There is no length prefix or content-type marker at the transition. The LF that
-ends the server's identification line is the boundary: the very next byte is
-the first byte of the SSH binary packet stream.
-
-## Identification exchange
-
-Each side sends an identification string in this form:
-
-```text
-SSH-protoversion-softwareversion SP comments CR LF
-```
-
-For SSH version 2, a typical exchange is:
-
-```text
-SSH-2.0-CourseClient_0.1<CR><LF>
-SSH-2.0-ExampleServer_4.2 staging<CR><LF>
-```
-
-The comment and the space before it are optional. The line is at most 255
-characters including CRLF, must not contain a NUL byte, and uses printable
-US-ASCII—with tighter restrictions for the version fields. Protocol version
-`2.0` is the version described by the modern SSH RFCs. The historical value
-`1.99` also announces compatibility with version 2; it does **not** mean a new
-version between 1 and 2. See [RFC 4253, Sections 4.2 and
-5](https://www.rfc-editor.org/rfc/rfc4253.html#section-4.2).
-
-Both peers may send without waiting for the other. The exchange therefore has
-no request/response order even if a packet capture happens to show one side
-first.
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    C->>S: TCP connection
-    par Independent writes
-        C->>S: SSH-2.0-CourseClient_0.1 CRLF
-    and
-        S->>C: SSH-2.0-ExampleServer_4.2 CRLF
-    end
-    Note over C,S: Identification complete
-    par First binary packets
-        C->>S: SSH_MSG_KEXINIT
-    and
-        S->>C: SSH_MSG_KEXINIT
-    end
-```
-
-### The server pre-banner caveat
-
-A server may send lines *before* its SSH identification line. This facility was
-intended for messages from wrappers and gateways. A conforming client must
-accept it.
-
-```text
-This system is restricted to authorised users.<CR><LF>
-Maintenance window: Sunday 02:00 UTC.<CR><LF>
-SSH-2.0-ExampleServer_4.2<CR><LF>
-```
-
-Pre-banner lines must not begin with `SSH-`; the first line that does is the
-identification candidate. A client may ignore or display preceding text. If it
-displays it, RFC 4253 recommends filtering terminal control characters.
-
-```mermaid
-flowchart LR
-    A[Zero or more pre-banner lines<br/>none starts with SSH-] --> B[SSH identification V_S]
-    B --> C[First SSH binary packet]
-    A -. not part of H .-> X[May be ignored or<br/>displayed safely]
-    B -. exact bytes without CRLF<br/>become part of H .-> H[Exchange transcript]
-```
-
-The allowance is asymmetric: it applies to server output, not to client
-output.
-
-### Cleartext, but bound into the handshake
-
-Identification lines are visible to the network. They are not secrets and can
-reveal implementation names or compatibility hints. They nevertheless become
-inputs to the exchange hash during key exchange, with CRLF removed.
-
-```mermaid
-flowchart LR
-    VC[Client identification V_C] --> H[Exchange hash H]
-    VS[Server identification V_S] --> H
-    IC[Client KEXINIT I_C] --> H
-    IS[Server KEXINIT I_S] --> H
-    X[Host key and<br/>ephemeral exchange values] --> H
-    H --> Sig[Server signs H]
-```
-
-An active attacker can alter a cleartext line while it is in flight, but then
-the peers calculate different exchange hashes and signature verification
-fails. This is an example of *transcript binding*: early unauthenticated bytes
-are authenticated retrospectively by a later signature.
-
-> **Transcript invariant**
->
-> The exchange hash uses the exact identification bytes before CRLF, not a
-> normalized reconstruction of the parsed fields. Spacing and comments are
-> therefore part of the authenticated transcript.
-
-## `SSH_MSG_KEXINIT`: proposals, not a selection
-
-After identification, each peer sends `SSH_MSG_KEXINIT` as an SSH binary
-packet. At this point there are no negotiated keys, so this first packet is
-normally unencrypted and unauthenticated. Its exact payload is later included
-in the signed exchange hash.
+During the initial exchange, each peer normally sends an unprotected
+`SSH_MSG_KEXINIT` packet. Its exact payload is later included in the signed
+exchange hash.
 
 Conceptually, the payload contains:
 
@@ -214,14 +77,6 @@ The result is `curve25519-sha256`, because it is the first client preference
 that the server also supports. It does not matter that the server listed it
 second.
 
-```mermaid
-flowchart LR
-    C1[Client #1<br/>curve25519-sha256] --> Q1{In server list?}
-    Q1 -- Yes --> Pick[Select curve25519-sha256]
-    C2[Client #2<br/>ecdh-sha2-nistp256] -. not reached .-> Q2{In server list?}
-    C3[Client #3<br/>group14-sha256] -. not reached .-> Q3{In server list?}
-```
-
 Equivalent pseudocode is:
 
 ```text
@@ -256,19 +111,8 @@ originally published in RFC 4253.
 Neither peer sends a separate result. Both have the same two ordered proposals
 and run the same deterministic rule, so both derive the same selection.
 
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    C->>S: KEXINIT: client proposal
-    S->>C: KEXINIT: server proposal
-    Note left of C: select(client proposal, server proposal)
-    Note right of S: select(client proposal, server proposal)
-    Note over C,S: Same inputs + same rule = same result
-```
-
-This also explains why the exact original `KEXINIT` payloads must be retained:
-they are transcript inputs later, not merely temporary configuration data.
+The exact original `KEXINIT` payloads must be retained because they later
+become transcript inputs.
 
 ## The guessed-packet optimization
 
@@ -326,13 +170,16 @@ sequenceDiagram
     C->>S: KEXINIT includes ext-info-c
     S->>C: KEXINIT includes ext-info-s
     Note over C,S: Negotiate and complete KEX
-    C->>S: NEWKEYS
-    S->>C: NEWKEYS
-    opt Server has extensions to announce
-        S->>C: EXT_INFO (encrypted)
-    end
-    opt Client has extensions to announce
-        C->>S: EXT_INFO (encrypted)
+    par Client outbound transition
+        C->>S: NEWKEYS
+        opt Client sends extension information
+            C->>S: EXT_INFO as next packet
+        end
+    and Server outbound transition
+        S->>C: NEWKEYS
+        opt Server sends extension information
+            S->>C: EXT_INFO as next packet
+        end
     end
 ```
 
@@ -341,10 +188,15 @@ Unknown extension names must be ignored. A value is an arbitrary SSH string,
 not necessarily UTF-8 or a comma-separated list, so its named specification
 defines how to parse it.
 
-The first opportunity is immediately after the sender's first `NEWKEYS`.
-RFC 8308 also permits a server to send a replacement `EXT_INFO` immediately
-before `SSH_MSG_USERAUTH_SUCCESS`. Extension negotiation does not change the
-algorithm choices already made by `KEXINIT`.
+The most visible example is `server-sig-algs`. It lets a server report the
+public-key signature algorithms it can process during user authentication.
+The user-authentication chapter follows that decision.
+
+The first opportunity is directional: if an endpoint sends `EXT_INFO` after
+the initial KEX, it must be that sender's next packet after its first
+`NEWKEYS`. RFC 8308 also permits a server to send a replacement `EXT_INFO`
+immediately before `SSH_MSG_USERAUTH_SUCCESS`. Extension negotiation does not
+change the algorithm choices already made by `KEXINIT`.
 
 ### Strict key exchange
 
@@ -355,8 +207,11 @@ similarly named `StrictHostKeyChecking` user option.
 Support is announced with role-specific pseudo-algorithms. Deployed names
 include `kex-strict-c-v00@openssh.com` and
 `kex-strict-s-v00@openssh.com`; the current specification also defines the
-standard-form names `kex-strict-c` and `kex-strict-s`. The two peers must offer
-matching forms. See the [strict KEX Internet-Draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-strict-kex/)
+standard-form names `kex-strict-c` and `kex-strict-s`. Strict KEX activates
+when the client/server pair uses the same form: either both standard names or
+both pre-standard names. A standard name on one side does not pair with a
+pre-standard name on the other. See the
+[strict KEX Internet-Draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-strict-kex/02/)
 and OpenSSH's [protocol extension documentation](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL).
 
 When strict KEX is active:
@@ -366,14 +221,6 @@ When strict KEX is active:
   during the initial exchange; and
 - packet sequence numbers reset just after each direction's `NEWKEYS`, for the
   initial exchange and later rekeys.
-
-```mermaid
-flowchart LR
-    A[KEXINIT must be first] --> B[Only expected KEX messages]
-    B --> C[NEWKEYS]
-    C --> D[Reset packet sequence number]
-    D --> E[Encrypted post-KEX traffic]
-```
 
 The base RFC allows some generic transport messages during KEX. Strict KEX
 narrows that grammar: an unexpected `IGNORE`, `DEBUG`, or other non-KEX message
@@ -385,22 +232,13 @@ to manipulate the implicit sequence-number state.
 >
 > “Authenticated later” works only when the later authenticator covers all
 > security-relevant state. Strict KEX closes gaps between the signed transcript
-> and the packet sequence numbers used by the encrypted transport.
+> and the packet sequence numbers used by the protected transport.
 
 ## Compatibility and registries
 
 SSH algorithm names are extensibility points rather than version bumps. New
 methods can be deployed by adding names to proposals, while old peers ignore
 names they do not know and select a mutual alternative.
-
-```mermaid
-flowchart TD
-    N[New algorithm name] --> O{Peer also offers it?}
-    O -- Yes --> P[It may be selected according<br/>to client preference]
-    O -- No --> Q{Another mutual name?}
-    Q -- Yes --> R[Select the mutual fallback]
-    Q -- No --> S[Disconnect: no match]
-```
 
 The authoritative sets of names live in the IANA SSH protocol-parameter
 registries. [RFC 9519](https://www.rfc-editor.org/rfc/rfc9519.html) changed the
@@ -435,10 +273,10 @@ current algorithm-guidance documents for that.
 
 </details>
 
-## Primary references
+## References
 
-- [RFC 4253 — SSH Transport Layer Protocol](https://www.rfc-editor.org/rfc/rfc4253.html), especially Sections 4, 7, and 8.
+- [RFC 4253 — SSH Transport Layer Protocol](https://www.rfc-editor.org/rfc/rfc4253.html), especially Section 7.
 - [RFC 8308 — Extension Negotiation in SSH](https://www.rfc-editor.org/rfc/rfc8308.html).
 - [RFC 9142 — SSH KEX Method Updates and Recommendations](https://www.rfc-editor.org/rfc/rfc9142.html).
 - [RFC 9519 — Update to the IANA SSH Registry Requirements](https://www.rfc-editor.org/rfc/rfc9519.html).
-- [Strict KEX Internet-Draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-strict-kex/) and [OpenSSH `PROTOCOL`](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL) for the deployed extension.
+- [Strict KEX Internet-Draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-strict-kex/02/) and [OpenSSH `PROTOCOL`](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL) for the deployed extension.

@@ -101,14 +101,6 @@ the ambiguity.
 
 An SSH trace mentions several names and keys which answer different questions.
 
-```mermaid
-flowchart LR
-    Dest["Requested destination<br/>host · port · alias policy"] --> Host["Server host identity<br/>host key or certificate"]
-    Host --> User["Requested account<br/>user name"]
-    User --> Credential["Authentication credential<br/>user key · password · response"]
-    Credential --> Process["Remote program context<br/>shell · command · subsystem"]
-```
-
 The network address tells the client where bytes were delivered. The host-key
 trust decision tells it which server received them. User authentication asks
 whether the client may act as an account on that server. A channel request then
@@ -119,14 +111,8 @@ start. Success at one boundary does not imply success at the next.
 
 SSH changes framing and data units as the conversation progresses:
 
-```mermaid
-flowchart LR
-    Bytes["Reliable stream bytes"] --> Lines["Identification lines"]
-    Lines --> Packets["SSH binary packets"]
-    Packets --> Messages["One message payload per packet"]
-    Messages --> Channels["Multiplexed channel data and control"]
-    Channels --> App["Application byte streams"]
-```
+The units narrow in this order: reliable-stream bytes, identification lines,
+SSH packets, message payloads, channel data, and application byte streams.
 
 An identification line is not a binary packet. A packet is not the same as a
 TCP segment. A channel data message can carry only part of an application's

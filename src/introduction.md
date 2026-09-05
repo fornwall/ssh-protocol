@@ -58,16 +58,17 @@ sequenceDiagram
     C-->>App: command result
 ```
 
-Key exchange authenticates the server before the client sends user
-credentials. The first exchange also creates a stable *session identifier*.
-Later public-key user authentication signs data containing that identifier,
-binding the login proof to this SSH connection.
+Key exchange supplies a signed host-key proof. The client combines that proof
+with a destination-to-key trust check before it sends user credentials. The
+first exchange also creates a stable *session identifier*. Later public-key
+user authentication signs data containing that identifier, binding the login
+proof to this SSH connection.
 
 ## What you will learn
 
 By the end of the course, you should be able to:
 
-- trace version exchange, negotiation, key exchange, user authentication, and
+- trace identification, negotiation, key exchange, user authentication, and
   channel traffic in order;
 - distinguish host keys, user keys, ephemeral key-exchange values, and derived
   traffic keys;
@@ -95,17 +96,12 @@ inputs, outputs, and required checks.
 > are not recipes for implementing cryptography. Never “temporarily” accept an
 > unknown or changed host key to get past a connection error.
 
-## The learning path
+Unless a chapter says otherwise, *protected transport* means that safe client
+policy selected confidentiality and integrity. SSH also registers `none`
+algorithms for unusual configurations; this course does not treat them as safe
+for credentials or sensitive channel data.
 
-```mermaid
-flowchart LR
-    A["1. Observe<br/>a real connection"] --> B["2. Read<br/>the transport"]
-    B --> C["3. Understand<br/>key exchange"]
-    C --> D["4. Verify<br/>the server"]
-    D --> E["5. Follow<br/>user authentication"]
-    E --> F["6. Trace<br/>channels"]
-    F --> G["7. Analyze<br/>security and failures"]
-```
+## The learning path
 
 We first trace a deliberately narrow case: a direct connection which verifies
 a host key, authenticates with a public key, executes one command, receives its

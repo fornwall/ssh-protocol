@@ -1,6 +1,6 @@
 [book]
 title = "The SSH Protocol Course"
-description = "Learn how to use SSH and how the protocol works on the wire"
+description = "Understand the SSH protocol from the client's point of view"
 authors = ["The SSH Protocol Course contributors"]
 language = "en"
 src = "src"

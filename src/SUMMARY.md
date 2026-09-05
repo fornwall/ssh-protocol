@@ -7,21 +7,24 @@
 # Orientation
 
 - [Observe a connection](./first-connection.md)
-- [Cryptography as protocol building blocks](./cryptography-primer.md)
 - [The client's view of protocol state](./client-architecture.md)
 
 # The transport layer
 
-- [The SSH transport protocol](./transport.md)
-- [Version exchange and algorithm negotiation](./version-and-negotiation.md)
+- [Identification exchange](./identification.md)
 - [SSH binary packets and data types](./binary-packets.md)
+- [Algorithm negotiation](./version-and-negotiation.md)
+- [Cryptography as protocol building blocks](./cryptography-primer.md)
 - [Key exchange](./key-exchange.md)
+  - [Key-exchange method survey (optional)](./key-exchange-methods.md)
 - [Server authentication](./server-authentication.md)
 
-# Authentication and connections
+# User authentication and the connection protocol
 
 - [User authentication](./user-authentication.md)
-- [Channels and the connection protocol](./channels.md)
+- [Channels and flow control](./channels.md)
+- [Sessions: commands, terminals, and subsystems](./sessions.md)
+- [TCP forwarding](./forwarding.md)
 
 # Security and analysis
 

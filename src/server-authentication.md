@@ -7,71 +7,23 @@ Server authentication joins two separate facts:
 1. The server proves that it controls a private host key.
 2. The client decides whether the matching public host key is trusted for the requested host.
 
-The protocol provides the proof. Local policy provides the trust decision. [RFC 4251, Section 4.1](https://www.rfc-editor.org/rfc/rfc4251.html#section-4.1) describes the SSH host-key trust models, while [RFC 4253, Section 7](https://www.rfc-editor.org/rfc/rfc4253.html#section-7) binds the host key into key exchange.
+The protocol provides the proof. Local policy provides the trust decision.
+[RFC 4251, Section 4.1](https://www.rfc-editor.org/rfc/rfc4251.html#section-4.1)
+describes the SSH host-key trust models. [RFC 4253, Section
+8](https://www.rfc-editor.org/rfc/rfc4253.html#section-8) shows the host key
+bound into a signed key exchange.
 
-## Learning objectives
+## From host-key proof to server identity
 
-After this chapter, you should be able to:
+[Key exchange](./key-exchange.md) explains how the server signs the exchange
+hash `H`. The client verifies that signature with the public host key carried
+in the key-exchange reply. This proves control of the matching private key and
+binds the proof to this exchange.
 
-- distinguish a host key from a user key and a session encryption key;
-- explain what the server signs during key exchange;
-- describe trust on first use and CA-based trust;
-- decide safely what to do when a host key is new or has changed; and
-- recognize the difference between a wire-format key blob and a public-key file.
-
-## Three kinds of keys
-
-The word *key* is overloaded in SSH. Keep these roles separate:
-
-| Key | Usually persists? | Controlled by | Purpose |
-| --- | --- | --- | --- |
-| Host key pair | Yes | Server operator | Prove the server's identity |
-| User key pair | Yes | User or agent | Prove authorization for an account |
-| Session encryption keys | No | This connection's endpoints | Protect packets in this connection |
-
-```mermaid
-flowchart LR
-    HK["Server host private key"] -->|"signs exchange hash"| HP["Server identity proof"]
-    UK["User private key"] -->|"signs userauth request"| UP["User identity proof"]
-    KEX["Key-exchange inputs"] -->|"key derivation"| SK["Short-lived session keys"]
-    SK --> ENC["Encrypt and authenticate packets"]
-```
-
-A host key and a user key can use the same kind of signature algorithm, but they sign different data and are checked against different trust stores. Session keys are symmetric secrets derived by key exchange; they are not entries in `known_hosts` or `authorized_keys`.
-
-## Signing is not encryption
-
-A digital signature is a proof about data, not a container that hides data. At a black-box level:
-
-```mermaid
-flowchart LR
-    D["Message"] --> Sign["SIGN"]
-    Priv["Private key"] --> Sign
-    Sign --> Sig["Signature"]
-
-    D2["Message"] --> Verify["VERIFY"]
-    Pub["Public key"] --> Verify
-    Sig2["Signature"] --> Verify
-    Verify --> Result["valid or invalid"]
-```
-
-- `SIGN(private key, message) -> signature`
-- `VERIFY(public key, message, signature) -> valid or invalid`
-
-The verifier learns that somebody controlling the private key signed exactly that message. The message and signature need not be secret. By contrast, encryption takes plaintext and an encryption key and produces ciphertext so that an observer cannot read the plaintext.
-
-Modern SSH host keys such as `ssh-ed25519` are signature-only keys; they do not encrypt the connection. [RFC 8709](https://www.rfc-editor.org/rfc/rfc8709.html#section-3) specifies Ed25519 and Ed448 for SSH. RSA keys can also produce signatures using `rsa-sha2-256` or `rsa-sha2-512`, specified by [RFC 8332](https://www.rfc-editor.org/rfc/rfc8332.html). The key-exchange output is what supplies symmetric encryption keys.
-
-## How key exchange authenticates the server
-
-During key exchange, both sides compute an exchange hash `H`. Its inputs include the client and server identification strings, both algorithm-negotiation packets, the server public host key, the ephemeral key-exchange values, and the shared secret. The exact details vary by key-exchange method, but the interface is stable:
-
-```text
-HASH(protocol transcript || server host key || shared-secret inputs) -> H
-SIGN(server host private key, H) -> signature
-```
-
-The first `H` also becomes the connection's session identifier. See [RFC 4253, Sections 7.2 and 8](https://www.rfc-editor.org/rfc/rfc4253.html#section-7.2).
+The proof does not name a network destination. An attacker can complete the
+same protocol with the attacker's own host key. The client must also apply a
+trust rule that binds the presented public key to the destination it intended
+to reach.
 
 ```mermaid
 sequenceDiagram
@@ -91,9 +43,9 @@ sequenceDiagram
     Note over C,S: Continue only if proof and trust policy both succeed
 ```
 
-Checking only the signature is insufficient. An attacker can sign with the attacker's own host key. The client must also know that the presented public key belongs to the destination the user intended.
-
-Conversely, finding a matching key in `known_hosts` is insufficient unless the signature over the exchange is valid. The signature proves that the peer currently controls the private half and binds that proof to this particular key-exchange transcript.
+The two checks are independent. A trusted stored key without a valid exchange
+signature proves nothing about the current peer. A valid signature made by an
+untrusted key proves control of that key, not the server's identity.
 
 ## Trust models
 
@@ -122,15 +74,21 @@ TOFU detects an attacker who appears only after a trustworthy first connection. 
 
 With CA-based trust, the client trusts a CA public key and accepts host identities certified under it, subject to certificate names and validity policy. This moves the maintenance problem from every host key to a smaller set of CA keys.
 
-```mermaid
-flowchart LR
-    CA["Trusted host CA public key"] --> VerifyCert["Verify host certificate"]
-    Cert["Presented host certificate<br/>names · validity · host public key"] --> VerifyCert
-    Name["Requested destination"] --> VerifyCert
-    VerifyCert --> Decision["accept or reject"]
-```
+The deployed OpenSSH certificate format wraps a host public key with signed
+metadata. A client validates at least:
 
-The architecture permits a CA trust model; certificate encoding and policy are extension-specific. OpenSSH records trusted host CAs with an `@cert-authority` marker in known-hosts files. See the OpenBSD [`sshd(8)` KNOWN_HOSTS FILE FORMAT](https://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT) documentation for that implementation's syntax.
+- that the certificate is a host certificate, not a user certificate;
+- the CA signature and local trust in that CA;
+- a principal matching the intended destination;
+- the validity interval and revocation policy; and
+- every critical option it must understand to accept the certificate.
+
+The key identifier is useful for logs and revocation, but it is not the
+hostname match. OpenSSH records trusted host CAs with an `@cert-authority`
+marker in `known_hosts`. The format is a deployed extension rather than an
+X.509 certificate. See the
+[OpenSSH certificate specification](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.certkeys)
+and the [`sshd(8)` known-hosts format](https://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT).
 
 ## The `known_hosts` database
 
@@ -196,6 +154,18 @@ When a stored binding conflicts:
 
 Host-key rotation can be designed so old and new keys overlap, letting clients learn the replacement through an already authenticated connection. The precise mechanism depends on client and server extensions, but the invariant remains: a new trust binding needs an authenticated path.
 
+OpenSSH deploys such a path with `hostkeys` and `hostkeys-prove` global
+requests. After user authentication, the server can advertise its host-key
+set. The client asks for possession proofs for new keys; each proof covers the
+session identifier and the new host key. The client records a new key only
+after verifying its proof through the connection already authenticated by a
+trusted key.
+
+This mechanism supports overlap and algorithm migration. It does not make an
+unexpected key at the start of an unauthenticated connection trustworthy. The
+[host-key update Internet-Draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-hostkey-update/)
+documents the deployed protocol.
+
 ## Protocol review
 
 At the end of server authentication, you should be able to answer all of these questions from the protocol exchange and the client's trust policy:
@@ -216,7 +186,8 @@ For each situation, write down whether the signature check succeeds, whether the
 2. An attacker presents a different public key and a valid signature made by the matching attacker key.
 3. A rebuilt server presents a new key that an administrator has independently verified.
 
-The key insight is that situation 2 has valid cryptography but invalid identity. Situation 3 becomes safe only when the trust database is deliberately updated from authenticated information.
+Situation 2 has valid cryptography but invalid identity. Situation 3 becomes
+safe only after the trust database is updated from authenticated information.
 
 ## References
 
@@ -226,3 +197,4 @@ The key insight is that situation 2 has valid cryptography but invalid identity.
 - [RFC 8332: Use of RSA Keys with SHA-256 and SHA-512 in SSH](https://www.rfc-editor.org/rfc/rfc8332.html).
 - [RFC 8709: Ed25519 and Ed448 Public Key Algorithms for SSH](https://www.rfc-editor.org/rfc/rfc8709.html).
 - [OpenBSD `sshd(8)`: SSH known-hosts file format](https://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT).
+- [OpenSSH host-key update Internet-Draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-hostkey-update/).

@@ -3,17 +3,6 @@
 The SSH specifications are a family, not one linear document. Use this map to
 find the authoritative field layout or behavior behind a course explanation.
 
-```mermaid
-flowchart TD
-    A["RFC 4251<br/>architecture and wire types"] --> T["RFC 4253<br/>transport"]
-    A --> U["RFC 4252<br/>user authentication"]
-    A --> C["RFC 4254<br/>connection protocol"]
-    A --> N["RFC 4250 + IANA<br/>assigned names and numbers"]
-    T --> Modern["Later KEX, cipher,<br/>signature and extension RFCs"]
-    U --> Methods["Method-specific RFCs"]
-    C --> Features["Channels and forwarding"]
-```
-
 ## Core documents
 
 - [RFC 4251 — SSH Protocol Architecture](https://www.rfc-editor.org/rfc/rfc4251):
@@ -33,6 +22,7 @@ flowchart TD
 ## Algorithms and extensions used in this course
 
 - [RFC 4419 — Diffie-Hellman Group Exchange](https://www.rfc-editor.org/rfc/rfc4419)
+- [RFC 4344 — SSH Transport-Layer Encryption Modes](https://www.rfc-editor.org/rfc/rfc4344)
 - [RFC 5656 — Elliptic Curve Algorithms for SSH](https://www.rfc-editor.org/rfc/rfc5656)
 - [RFC 5647 — AES-GCM for SSH](https://www.rfc-editor.org/rfc/rfc5647)
 - [RFC 6668 — SHA-2 Data Integrity Verification](https://www.rfc-editor.org/rfc/rfc6668)
@@ -42,6 +32,7 @@ flowchart TD
 - [RFC 8709 — Ed25519 and Ed448 Host Keys](https://www.rfc-editor.org/rfc/rfc8709)
 - [RFC 8731 — Curve25519 and Curve448 Key Exchange](https://www.rfc-editor.org/rfc/rfc8731)
 - [RFC 9142 — Updated KEX Recommendations](https://www.rfc-editor.org/rfc/rfc9142)
+- [RFC 9941 — Hybrid sntrup761/X25519 Key Exchange](https://www.rfc-editor.org/rfc/rfc9941)
 - [RFC 10042 — ML-KEM Hybrid Key Exchange for SSH](https://www.rfc-editor.org/rfc/rfc10042)
 
 ## Authentication and key representation
