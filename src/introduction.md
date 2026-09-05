@@ -1,46 +1,124 @@
 # Introduction
 
-SSH is both an everyday tool and a layered network protocol. This course will teach both views together: the commands an operator uses and the protocol messages those commands produce.
+SSH is both an everyday command and a family of protocols. This course takes
+the second view: we will follow an SSH client from a newly opened byte stream
+to an authenticated, multiplexed connection capable of running a command.
 
-At a high level, SSH builds upward from a reliable byte stream. Each protocol layer gives the next one a narrower, safer abstraction:
+The goal is not to design new cryptography or build a client from scratch. It
+is to understand what the client and server say, why each exchange exists, and
+where the protocol's security claims begin and end.
+
+## The three protocol layers
+
+SSH builds upward from a reliable, ordered byte stream. Each layer gives the
+next one a narrower and safer abstraction.
 
 ```mermaid
 flowchart BT
-    TCP["TCP byte stream<br/>usually port 22"] --> Transport
-    Transport["Transport protocol<br/>server identity · key exchange · encryption"] --> Auth
-    Auth["User authentication protocol<br/>public key · password · other methods"] --> Connection
+    TCP["Reliable byte stream<br/>usually TCP port 22"] --> Transport
+    Transport["Transport protocol<br/>key exchange · server identity · protected packets"] --> Auth
+    Auth["User authentication<br/>public key · password · interactive methods"] --> Connection
     Connection["Connection protocol<br/>multiplexed, flow-controlled channels"] --> Uses
-    Uses["Shells · commands · SFTP · port forwarding"]
+    Uses["Shell · command · subsystem · TCP forwarding"]
 ```
 
-The major phases of a typical connection happen in this order. The authentication and connection-protocol messages are carried inside the encrypted transport established by key exchange.
+The separation matters. Encrypting bytes does not prove which server received
+them. Proving the server's identity does not prove which user is connecting.
+Authenticating a user does not explain how several terminal and forwarding
+streams share one connection. SSH assigns each job to a different layer.
+
+The foundational specification is
+[RFC 4251, the SSH protocol architecture](https://www.rfc-editor.org/rfc/rfc4251).
+Its companion documents define the
+[transport](https://www.rfc-editor.org/rfc/rfc4253),
+[user authentication](https://www.rfc-editor.org/rfc/rfc4252), and
+[connection](https://www.rfc-editor.org/rfc/rfc4254) protocols.
+
+## One connection at a glance
 
 ```mermaid
 sequenceDiagram
-    participant C as SSH client
+    participant App as Client application
+    participant C as SSH client protocol
     participant S as SSH server
-    C->>S: TCP connection
-    C->>S: Client identification (SSH-2.0-...)
-    S->>C: Server identification (SSH-2.0-...)
-    C->>S: Client KEXINIT algorithm lists
-    S->>C: Server KEXINIT algorithm lists
-    C->>S: Client ephemeral key value
+    App->>C: connect(host, user, command)
+    C->>S: Open reliable byte stream
+    C<<->>S: Identification lines
+    C<<->>S: KEXINIT negotiation
+    C<<->>S: Ephemeral key exchange
     S-->>C: Host key and signature
-    Note over C,S: Verify server; derive keys; exchange NEWKEYS
-    C->>S: Request ssh-userauth service
-    C->>S: Prove user identity
-    S-->>C: Authentication success
-    C->>S: Open a session channel
-    C->>S: Request a shell or command
-    C<<->>S: Encrypted channel data
+    C->>C: Verify server identity
+    C<<->>S: NEWKEYS
+    Note over C,S: Packets are now protected
+    C<<->>S: Authenticate user
+    C<<->>S: Open session channel
+    C->>S: Request exec "command"
+    C<<->>S: stdout, stderr, exit status
+    C<<->>S: EOF and CLOSE
+    C-->>App: command result
 ```
+
+Key exchange authenticates the server before the client sends user
+credentials. The first exchange also creates a stable *session identifier*.
+Later public-key user authentication signs data containing that identifier,
+binding the login proof to this SSH connection.
 
 ## What you will learn
 
-- Connect to remote systems and verify their identities.
-- Create and manage keys, configuration, agents, and jump hosts.
-- Transfer files and forward network connections safely.
-- Follow version exchange, algorithm negotiation, key exchange, authentication, and channels at the byte and message level.
-- Harden and troubleshoot real SSH clients and servers.
+By the end of the course, you should be able to:
 
-The course is under construction. Future chapters will pair practical labs with references to the relevant protocol specifications.
+- trace version exchange, negotiation, key exchange, user authentication, and
+  channel traffic in order;
+- distinguish host keys, user keys, ephemeral key-exchange values, and derived
+  traffic keys;
+- read SSH's binary types and packet framing at the level needed to follow a
+  protocol trace;
+- explain what the client must verify before accepting a server;
+- reason about how channel flow control keeps multiplexed streams independent;
+  and
+- diagnose failures by protocol phase instead of guessing from a final error.
+
+## How to use the course
+
+The chapters alternate between the wire view and the client's view of the
+conversation. Diagrams omit fields that do not matter to the point being
+explained; the linked specification remains authoritative. Names such as
+`string` and `uint32` refer to SSH wire types, not necessarily to types in a
+programming language.
+
+You should be comfortable with bytes, hexadecimal notation, network sockets,
+and basic client/server programming. No cryptography background is assumed.
+The cryptography primer treats each primitive as a black box with explicit
+inputs, outputs, and required checks.
+
+> **Security boundary:** The sketches in this course explain the protocol; they
+> are not recipes for implementing cryptography. Never “temporarily” accept an
+> unknown or changed host key to get past a connection error.
+
+## The learning path
+
+```mermaid
+flowchart LR
+    A["1. Observe<br/>a real connection"] --> B["2. Read<br/>the transport"]
+    B --> C["3. Understand<br/>key exchange"]
+    C --> D["4. Verify<br/>the server"]
+    D --> E["5. Follow<br/>user authentication"]
+    E --> F["6. Trace<br/>channels"]
+    F --> G["7. Analyze<br/>security and failures"]
+```
+
+We first trace a deliberately narrow case: a direct connection which verifies
+a host key, authenticates with a public key, executes one command, receives its
+output and exit status, and closes. Interactive terminals, agents, proxies,
+SFTP, and forwarding become easier to understand once that core exchange is
+clear.
+
+## A note on old and new SSH
+
+The 2006 core RFCs describe SSH version 2, but algorithm advice evolves.
+Do not copy their original mandatory algorithm set into a new client.
+[RFC 9142](https://www.rfc-editor.org/rfc/rfc9142) updates key-exchange
+recommendations, while the
+[IANA SSH protocol registries](https://www.iana.org/assignments/ssh-parameters/ssh-parameters.xhtml)
+record assigned names. Later chapters call out extensions and newer algorithms
+where they change the protocol model.

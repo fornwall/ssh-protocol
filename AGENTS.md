@@ -10,3 +10,14 @@ This project is an mdBook course about SSH.
 - `book/` and `dist/` are generated and must not be committed.
 
 Run `just check` before committing. Use `just view` for local authoring and `just package VERSION` to create a distributable archive.
+
+# Course focus
+
+- Teach a deep understanding of the SSH protocol from the client's point of
+  view. This is not a tutorial on how to write an SSH client or parser.
+- Include wire formats, state transitions, and implementation considerations
+  only when they clarify protocol behavior or a security boundary. Avoid
+  low-level parser construction, software architecture, and generic engineering
+  detail that would derail the protocol narrative.
+- Use code or pseudocode sparingly, and only when it makes a protocol rule or
+  interaction materially easier to understand.

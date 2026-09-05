@@ -33,7 +33,9 @@ Mermaid is configured as an mdBook preprocessor, and its browser assets are kept
 - [RFC 8332 — Use of RSA Keys with SHA-2](https://www.rfc-editor.org/rfc/rfc8332)
 - [RFC 8709 — Ed25519 and Ed448 Host Key Algorithms](https://www.rfc-editor.org/rfc/rfc8709)
 - [RFC 9142 — Key Exchange Method Updates and Recommendations](https://www.rfc-editor.org/rfc/rfc9142)
-- [RFC 9519 — Strict Key Exchange](https://www.rfc-editor.org/rfc/rfc9519)
+- [RFC 9519 — SSH Registry Requirements](https://www.rfc-editor.org/rfc/rfc9519)
+- [RFC 10042 — ML-KEM Hybrid Key Exchange for SSH](https://www.rfc-editor.org/rfc/rfc10042)
+- [Strict KEX Internet-Draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-strict-kex/)
 - [IANA SSH Protocol Parameters](https://www.iana.org/assignments/ssh-parameters/ssh-parameters.xhtml)
 
 For a general overview and history, see [Secure Shell on Wikipedia](https://en.wikipedia.org/wiki/Secure_Shell).
@@ -49,7 +51,9 @@ For a general overview and history, see [Secure Shell on Wikipedia](https://en.w
 
 ## Status
 
-The book is at its initial scaffolding stage. Deployment is intentionally left for a future change.
+The first course path now covers the protocol from identification through a
+command-running channel, with security analysis and trace-based debugging.
+Deployment is intentionally left for a future change.
 
 ## License
 
