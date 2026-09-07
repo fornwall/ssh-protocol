@@ -19,7 +19,7 @@ SSH-protoversion-softwareversion SP comments CR LF
 For example:
 
 ```text
-SSH-2.0-CourseClient_0.1<CR><LF>
+SSH-2.0-GuideClient_0.1<CR><LF>
 SSH-2.0-ExampleServer_4.2 staging<CR><LF>
 ```
 
@@ -46,7 +46,7 @@ sequenceDiagram
     end
 ```
 
-This course uses two related terms:
+This guide uses two related terms:
 
 - **identification line**: the transmitted bytes, including the line ending;
 - **identification string**: the value placed in the exchange hash, without

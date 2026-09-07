@@ -1,7 +1,7 @@
 # Reference map
 
 The SSH specifications are a family, not one linear document. Use this map to
-find the authoritative field layout or behavior behind a course explanation.
+find the authoritative field layout or behavior behind a guide explanation.
 
 ## Core documents
 
@@ -19,7 +19,7 @@ find the authoritative field layout or behavior behind a course explanation.
   [IANA SSH Protocol Parameters registries](https://www.iana.org/assignments/ssh-parameters/ssh-parameters.xhtml):
   message numbers, disconnect reasons, service names, and algorithm names.
 
-## Algorithms and extensions used in this course
+## Algorithms and extensions used in this guide
 
 - [RFC 4419 — Diffie-Hellman Group Exchange](https://www.rfc-editor.org/rfc/rfc4419)
 - [RFC 4344 — SSH Transport-Layer Encryption Modes](https://www.rfc-editor.org/rfc/rfc4344)

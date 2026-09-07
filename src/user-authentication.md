@@ -7,7 +7,7 @@ different question from host verification:
 - **Server authentication:** is this the intended server?
 - **User authentication:** may this peer act as a particular account?
 
-This course assumes that client policy requires confidentiality and integrity
+This guide assumes that client policy requires confidentiality and integrity
 before user authentication. The SSH framework has a `none` cipher for unusual
 configurations. A safe client does not use password authentication without
 confidentiality. [RFC 4252](https://www.rfc-editor.org/rfc/rfc4252.html)

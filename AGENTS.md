@@ -1,17 +1,17 @@
 # Repository structure
 
-This project is an mdBook course about SSH.
+This project is an mdBook guide about SSH.
 
 - `book.toml` configures mdBook and the Mermaid preprocessor.
 - `src/SUMMARY.md` defines the chapter order and navigation.
-- `src/*.md` contains the course material.
+- `src/*.md` contains the guide material.
 - `mermaid.min.js` and `mermaid-init.js` are vendored by `mdbook-mermaid` for offline diagrams.
 - `justfile` provides the common development tasks; run `just` to list them.
 - `book/` and `dist/` are generated and must not be committed.
 
 Run `just check` before committing. Use `just view` for local authoring and `just package VERSION` to create a distributable archive.
 
-# Course focus
+# Guide focus
 
 - Teach a deep understanding of the SSH protocol from the client's point of
   view. This is not a tutorial on how to write an SSH client or parser.

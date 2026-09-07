@@ -1,7 +1,7 @@
 # Cryptography as protocol building blocks
 
 An SSH client composes cryptographic primitives; it should not invent them.
-For this course, treat each primitive as a black box with typed inputs,
+For this guide, treat each primitive as a black box with typed inputs,
 outputs, and failure conditions.
 
 ## The toolbox

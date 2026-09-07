@@ -1,7 +1,7 @@
 [book]
-title = "The SSH Protocol Course"
+title = "A Client’s Guide to the SSH Protocol"
 description = "Understand the SSH protocol from the client's point of view"
-authors = ["The SSH Protocol Course contributors"]
+authors = ["SSH Protocol Guide contributors"]
 language = "en"
 src = "src"
 

@@ -1,6 +1,6 @@
 # Introduction
 
-SSH is both an everyday command and a family of protocols. This course takes
+SSH is both an everyday command and a family of protocols. This guide takes
 the second view: we will follow an SSH client from a newly opened byte stream
 to an authenticated, multiplexed connection capable of running a command.
 
@@ -66,7 +66,7 @@ proof to this SSH connection.
 
 ## What you will learn
 
-By the end of the course, you should be able to:
+By the end of the guide, you should be able to:
 
 - trace identification, negotiation, key exchange, user authentication, and
   channel traffic in order;
@@ -79,7 +79,7 @@ By the end of the course, you should be able to:
   and
 - diagnose failures by protocol phase instead of guessing from a final error.
 
-## How to use the course
+## How to use the guide
 
 The chapters alternate between the wire view and the client's view of the
 conversation. Diagrams omit fields that do not matter to the point being
@@ -92,13 +92,13 @@ and basic client/server programming. No cryptography background is assumed.
 The cryptography primer treats each primitive as a black box with explicit
 inputs, outputs, and required checks.
 
-> **Security boundary:** The sketches in this course explain the protocol; they
+> **Security boundary:** The sketches in this guide explain the protocol; they
 > are not recipes for implementing cryptography. Never “temporarily” accept an
 > unknown or changed host key to get past a connection error.
 
 Unless a chapter says otherwise, *protected transport* means that safe client
 policy selected confidentiality and integrity. SSH also registers `none`
-algorithms for unusual configurations; this course does not treat them as safe
+algorithms for unusual configurations; this guide does not treat them as safe
 for credentials or sensitive channel data.
 
 ## The learning path

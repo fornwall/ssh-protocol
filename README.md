@@ -1,6 +1,6 @@
-# SSH Protocol Course
+# A Client’s Guide to the SSH Protocol
 
-An [mdBook](https://rust-lang.github.io/mdBook/) course about the SSH protocol
+An [mdBook](https://rust-lang.github.io/mdBook/) guide about the SSH protocol
 from the client's point of view.
 
 ## What is SSH?
@@ -59,7 +59,7 @@ For a general overview and history, see [Secure Shell on Wikipedia](https://en.w
 
 ## Status
 
-The course covers identification, packet framing, negotiation, key exchange,
+The guide covers identification, packet framing, negotiation, key exchange,
 host and user authentication, sessions, forwarding, security analysis, and
 trace-based diagnosis.
 

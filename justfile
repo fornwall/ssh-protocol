@@ -57,11 +57,11 @@ test:
 # Run all checks and produce the static book.
 check: lint test build
 
-# Package the built static site as dist/ssh-protocol-course-VERSION.tar.gz.
+# Package the built static site as dist/ssh-protocol-guide-VERSION.tar.gz.
 package version="dev": build
     mkdir -p "{{ dist_dir }}"
-    tar -C "{{ book_dir }}" -czf "{{ dist_dir }}/ssh-protocol-course-{{ version }}.tar.gz" .
-    @printf 'Created %s\n' "{{ dist_dir }}/ssh-protocol-course-{{ version }}.tar.gz"
+    tar -C "{{ book_dir }}" -czf "{{ dist_dir }}/ssh-protocol-guide-{{ version }}.tar.gz" .
+    @printf 'Created %s\n' "{{ dist_dir }}/ssh-protocol-guide-{{ version }}.tar.gz"
 
 # Remove generated build and package artifacts.
 clean:
