@@ -116,8 +116,16 @@ decapsulation ends the exchange.
 
 [RFC 9941](https://www.rfc-editor.org/rfc/rfc9941.html) defines the deployed
 `sntrup761x25519-sha512` method. It has the same broad role but different
-components, encodings, and combiner. Similar names do not make hybrid methods
-wire-compatible.
+KEM components and message lengths. It also hashes the concatenated secrets,
+using SHA-512. Its older
+`sntrup761x25519-sha512@openssh.com` name is an alias for the same wire method;
+the peers still need a name in common during negotiation.
+
+Both RFCs encode the combined secret `K` as an SSH `string` when computing
+the exchange hash and deriving keys. They preserve the hash output's fixed
+length, rather than converting it to the `mpint` used by traditional methods.
+Besides changing the transcript bytes, this avoids secret-dependent length
+changes from integer sign padding or removal of leading zeros.
 
 > A post-quantum key exchange protects session-secret establishment. If the
 > host signature is traditional, server authentication is not thereby

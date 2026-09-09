@@ -42,9 +42,10 @@ sequenceDiagram
     N->>S: Q_C
     Note over C: Keep ephemeral private value q_C
     Note over S: Generate q_S and Q_S
+    S->>S: Derive K and H, then sign H
     S->>N: Host public key K_S, Q_S, signature over H
     N->>C: K_S, Q_S, signature over H
-    Note over C,S: Independently derive the same shared secret K
+    C->>C: Derive K using q_C and Q_S
     Note right of C: Rebuild H, validate K_S, verify signature
 ```
 
@@ -247,12 +248,20 @@ During rekey:
 - client and server roles do not change;
 - fresh `K` and `H` values are produced;
 - the original session identifier does not change; and
-- higher-layer application traffic pauses once KEX is in progress, apart from
-  already in-flight packets allowed by the protocol state machine.
+- each sender pauses new authentication and connection messages from its own
+  `KEXINIT` until it sends its own `NEWKEYS`.
 
 A peer can receive an arbitrary number of application packets that were
 already in flight before it sees the other side's `KEXINIT`. This is why the
 rekey transition is not an instantaneous, connection-wide boundary.
+
+For example, after sending `KEXINIT`, the client must still accept channel
+data sent before the server's `KEXINIT`. Once the server's `KEXINIT` arrives,
+that earlier data is finished because the underlying stream preserves order.
+After sending `NEWKEYS`, a peer can resume higher-layer messages under its new
+outbound keys without waiting for the other direction to switch. The exact
+send restriction is in
+[RFC 4253 section 7.1](https://www.rfc-editor.org/rfc/rfc4253#section-7.1).
 
 ```mermaid
 sequenceDiagram

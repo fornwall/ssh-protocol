@@ -30,6 +30,12 @@ This produces three important boundaries:
 - transport rekeying can occur later without repeating user authentication or
   discarding open channels.
 
+The diagram shows the usual successful path. A disconnect or transport failure
+can end any phase. Rekeying belongs to the transport and can also interrupt
+authentication, although RFC 8308 recommends waiting until authentication
+succeeds and imposes additional restrictions when delayed compression is in
+use. See [compression transitions](./binary-packets.md#compression-changes-payloads-not-channels).
+
 ## Client and server roles are asymmetric
 
 Both sides propose algorithms and contribute ephemeral key material, but their
@@ -92,12 +98,17 @@ A zero window on channel 1 does not freeze channel 2. Closing channel 0 does
 not end the transport. Rekeying changes packet protection beneath all of them
 but does not create new logical channels.
 
+This independence is at the SSH channel layer. All channels still share TCP
+ordering and congestion control; a missing TCP segment can delay every
+channel. The [flow-control chapter](./channels.md#one-transport-many-channels)
+explains that limit.
+
 The current conversation supplies context for message numbers. For example,
 message number 60 can mean a public-key query acceptance, a password-change
 request, or an interactive prompt. The active authentication method removes
 the ambiguity.
 
-## Four distinct identities
+## Four distinct questions
 
 An SSH trace mentions several names and keys which answer different questions.
 
@@ -109,10 +120,10 @@ start. Success at one boundary does not imply success at the next.
 
 ## Follow the unit currently in motion
 
-SSH changes framing and data units as the conversation progresses:
-
-The units narrow in this order: reliable-stream bytes, identification lines,
-SSH packets, message payloads, channel data, and application byte streams.
+SSH changes framing and data units as the conversation progresses. It begins
+with identification lines on the reliable stream, then carries SSH packets
+containing message payloads. Later, channel data carries application byte
+streams inside those messages.
 
 An identification line is not a binary packet. A packet is not the same as a
 TCP segment. A channel data message can carry only part of an application's

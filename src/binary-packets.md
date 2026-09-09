@@ -47,6 +47,26 @@ separated by commas, with no empty element. The zero-length string represents an
 empty list. Compare algorithm names as exact protocol identifiers; do not trim,
 case-fold, or normalize them.
 
+### Why `mpint` is different from an arbitrary string
+
+An `mpint` represents an integer with the shortest signed two's-complement
+encoding. Positive values whose highest bit would be one need a leading zero
+byte to avoid looking negative. Zero has an empty body.
+
+| Integer | Complete SSH `mpint` encoding |
+| ---: | --- |
+| 0 | `00 00 00 00` |
+| 127 | `00 00 00 01 7f` |
+| 128 | `00 00 00 02 00 80` |
+| −128 | `00 00 00 01 80` |
+
+The length prefix counts the integer's encoded bytes, including any required
+sign byte. This matters to the protocol because key exchange hashes encoded
+values. An integer and a fixed-length byte string containing similar bytes
+are not interchangeable transcript inputs. The
+[method survey](./key-exchange-methods.md#hybrid-post-quantum-exchange)
+shows why hybrid methods explicitly choose a string encoding for their secret.
+
 ## One payload, one message number
 
 The first byte of an SSH packet's payload is its message number. The remaining
@@ -73,18 +93,25 @@ Some transport message numbers are fixed by RFC 4253:
 
 Numbers 30 through 49 are interpreted by the negotiated key-exchange method.
 Higher-layer RFCs define their own message layouts. A number's meaning therefore
-depends on the current protocol state. An unknown message is answered with
+depends on the current protocol state. Under the base transport rules, an
+unrecognized message is answered with
 `SSH_MSG_UNIMPLEMENTED`, whose field identifies the sequence number of the
 unrecognized packet; see
 [RFC 4253, section 11.4](https://www.rfc-editor.org/rfc/rfc4253#section-11.4).
 
+An unrecognized message is different from a recognized message arriving in an
+illegal state. For example, a userauth success cannot authorize channels
+before authentication has started. Strict KEX also requires termination for
+unexpected initial-exchange messages; the generic `UNIMPLEMENTED` rule does
+not override it.
+
 ```mermaid
 flowchart LR
-    P["authenticated payload"] --> N["first byte<br/>message number"]
-    N --> S{"current state"}
-    S -->|"20 during transport"| K["interpret as KEXINIT"]
-    S -->|"50 during userauth"| U["interpret as userauth message"]
-    S -->|"unknown here"| X["send UNIMPLEMENTED"]
+    P["message payload<br/>verified if protection is active"] --> N["first byte<br/>message number"]
+    N --> S{"meaning and current state"}
+    S -->|"recognized and permitted"| K["process message"]
+    S -->|"unrecognized under base rules"| X["send UNIMPLEMENTED"]
+    S -->|"forbidden in this state"| F["reject protocol violation"]
 ```
 
 ### Transport control messages
@@ -195,6 +222,12 @@ construction is documented in the
 AEAD mappings such as AES-GCM define their own length, nonce, and tag handling.
 There is no universal “modern SSH packet” layout beyond the base fields.
 
+Alignment is mode-specific too. The base construction aligns
+`4 + packet_length`; OpenSSH's encrypt-then-MAC and AES-GCM constructions
+leave the four-byte length outside the encrypted body and align that body.
+Applying the base padding arithmetic to every mode can produce packets that
+violate the active mode's alignment rules.
+
 This distinction matters when reading a trace. A visible length may be an
 authenticated cleartext field in one mode, encrypted state in another, or
 handled by a separate algorithm-specific construction. Packet boundaries are
@@ -203,17 +236,25 @@ not trusted merely because a tentative length was recovered.
 ### Compression changes payloads, not channels
 
 Compression applies to message payloads before packet protection and after
-packet verification. Its state is directional. The base `zlib` method starts
+packet verification. Its state is directional and spans packets within a key
+epoch, so one packet need not be an independently decompressible stream. The
+compression state is reset at rekey. The base `zlib` method starts
 after `NEWKEYS`; the deployed `zlib@openssh.com` method delays compression
 until user authentication succeeds, reducing exposure of decompression code
 to unauthenticated traffic.
 
 [RFC 8308](https://www.rfc-editor.org/rfc/rfc8308#section-3.2) also defines the
-`delay-compression` extension. After authentication succeeds, the server starts
-compressing its direction after sending `SSH_MSG_USERAUTH_SUCCESS`. The client
-then sends `SSH_MSG_NEWCOMPRESS` uncompressed and compresses later packets in
-its direction. These methods use the same compression algorithm but have
-different transition rules.
+`delay-compression` extension. Both peers must send it to negotiate replacement
+compression algorithms. The server activates its new algorithm after sending
+`SSH_MSG_USERAUTH_SUCCESS`; the client activates its new algorithm after
+sending `SSH_MSG_NEWCOMPRESS`. Each trigger still uses the previous compression
+state, often `none`.
+
+Unlike `zlib@openssh.com`, this extension negotiates algorithms in `EXT_INFO`
+and uses an explicit client-side boundary. `NEWCOMPRESS` resolves a race:
+the server cannot tell from an ordinary incoming packet whether the client
+has already received authentication success. RFC 8308 also restricts rekeying
+around these triggers so key and compression transitions cannot conflict.
 
 ## Sequence numbers
 

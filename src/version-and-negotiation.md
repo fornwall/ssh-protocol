@@ -62,9 +62,10 @@ algorithm-selection nonce and has no role in the selection rule.
 
 ## The selection rule: client preference wins
 
-For each category, choose the **first algorithm in the client's list that also
-appears in the server's list**. This rule applies even when the server is
-performing the calculation and even for the server-to-client direction.
+The basic rule is to choose the **first compatible algorithm in the client's
+list that also appears in the server's list**. This rule applies even when
+the server is performing the calculation and even for the server-to-client
+direction. Compatibility matters because some categories depend on others.
 
 Suppose the proposals are:
 
@@ -77,19 +78,24 @@ The result is `curve25519-sha256`, because it is the first client preference
 that the server also supports. It does not matter that the server listed it
 second.
 
-Equivalent pseudocode is:
+The KEX method must have a mutually supported host-key algorithm with the
+capability it requires. For the signed methods in this guide, that means a
+signature-capable host key. The host-key choice then follows the client's
+order among the compatible mutual names. A shared KEX name alone is therefore
+not enough to establish compatibility.
 
-```text
-for candidate in client_preferences:
-    if candidate is in server_supported:
-        return candidate
-fail key exchange: no mutually supported algorithm
-```
+For encryption with a separate MAC, both categories need a match. The deployed
+AEAD modes `aes128-gcm@openssh.com`, `aes256-gcm@openssh.com`, and
+`chacha20-poly1305@openssh.com` instead supply their own integrity protection:
+selecting one as the cipher skips the separate MAC negotiation in that
+direction. Disjoint MAC lists do not make that AEAD choice fail. This differs
+from the original AES-GCM negotiation in RFC 5647; see the
+[OpenSSH transport extensions](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL)
+and the [AES-GCM specification draft](https://datatracker.ietf.org/doc/draft-miller-sshm-aes-gcm/).
 
-For a host-key algorithm, the candidate must also have the capability required
-by the chosen key-exchange method—for example, it must be able to make a
-signature when the KEX method requires one. If any required category has no
-match, negotiation fails; neither endpoint silently invents a fallback.
+Language lists may be empty and do not need a match. If a *required* choice
+has no compatible match, negotiation fails; neither endpoint silently invents
+a fallback.
 
 ### A worked multi-category example
 
@@ -97,8 +103,9 @@ match, negotiation fails; neither endpoint silently invents a fallback.
 | --- | --- | --- | --- |
 | KEX | `curve25519-sha256`, `ecdh-sha2-nistp256` | `ecdh-sha2-nistp256`, `curve25519-sha256` | `curve25519-sha256` |
 | Host key | `ssh-ed25519`, `rsa-sha2-256` | `rsa-sha2-256` | `rsa-sha2-256` |
-| Encryption C→S | `cipher-a`, `cipher-b` | `cipher-b`, `cipher-a` | `cipher-a` |
+| Encryption C→S | `aes128-gcm@openssh.com`, `cipher-a` | `cipher-a`, `aes128-gcm@openssh.com` | `aes128-gcm@openssh.com` |
 | Encryption S→C | `cipher-b`, `cipher-a` | `cipher-a`, `cipher-b` | `cipher-b` |
+| MAC C→S | `hmac-sha2-256` | `hmac-sha2-512` | Skipped; GCM supplies the tag |
 | Compression C→S | `none` | `none`, `zlib` | `none` |
 
 The placeholder cipher names make the ordering rule visible without implying a
@@ -259,6 +266,8 @@ current algorithm-guidance documents for that.
    receive `EXT_INFO`”?
 5. What state does strict KEX protect that the original exchange hash did not
    fully bind?
+6. Both peers select `aes128-gcm@openssh.com` but offer disjoint MAC lists.
+   Does that direction fail negotiation?
 
 <details>
 <summary>Answers</summary>
@@ -270,6 +279,7 @@ current algorithm-guidance documents for that.
 4. It means the client is prepared to receive it from the server.
 5. The ordering of packets during initial KEX and the packet sequence-number
    state at the transition to new keys.
+6. No. This AEAD cipher supplies integrity and skips separate MAC negotiation.
 
 </details>
 

@@ -56,8 +56,10 @@ OPEN(key, nonce, ciphertext, associated_data, tag) -> plaintext | failure
 Never release unauthenticated plaintext. Never reuse a nonce with the same key
 when the algorithm forbids it. [RFC 5116](https://www.rfc-editor.org/rfc/rfc5116)
 defines the general AEAD interface; individual SSH cipher specifications define
-how it is mapped onto SSH packets. AES-GCM's SSH mapping is described by
-[RFC 5647](https://www.rfc-editor.org/rfc/rfc5647).
+how it is mapped onto SSH packets. [RFC 5647](https://www.rfc-editor.org/rfc/rfc5647)
+describes an AES-GCM mapping; the deployed OpenSSH AES-GCM names use different
+negotiation rules, explained in
+[Algorithm negotiation](./version-and-negotiation.md#the-selection-rule-client-preference-wins).
 
 ## Key agreement
 
@@ -120,6 +122,17 @@ VERIFY(public_key, message, signature) -> valid | invalid
 ```
 
 SSH uses signatures in two places with different identities:
+
+- During key exchange, the **server host key** signs the exchange hash. The
+  client verifies the signature and checks that the key represents the
+  intended destination.
+- During public-key user authentication, the **user key** signs the session
+  identifier and authentication request. The server verifies the signature
+  and checks that the key is authorized for the requested account.
+
+Neither signature encrypts the conversation. The separately derived traffic
+keys do that. The signature proves possession of a key; the verifier's trust
+or account policy gives that proof its meaning.
 
 A public key algorithm name may describe the key format, the signature scheme,
 or both. Keep the negotiated name, encoded key blob, and signature wrapper

@@ -34,9 +34,9 @@ sequenceDiagram
     C->>S: Identification and KEXINIT
     S->>C: Identification and KEXINIT
     C->>S: Client ephemeral value
-    Note over C,S: Both derive shared secret K and exchange hash H
+    Note over S: Derive K and H using both ephemeral values
     S->>C: Public host key K_S, server ephemeral value, SIGN(host_private, H)
-    C->>C: Recompute H
+    C->>C: Derive K and recompute H from the reply and transcript
     C->>C: VERIFY(K_S, H, signature)
     C->>T: Is K_S trusted for this destination?
     T-->>C: match, new key, or conflict

@@ -29,9 +29,10 @@ find the authoritative field layout or behavior behind a guide explanation.
 - [RFC 8268 — SHA-2 with finite-field DH](https://www.rfc-editor.org/rfc/rfc8268)
 - [RFC 8308 — Extension Negotiation](https://www.rfc-editor.org/rfc/rfc8308)
 - [RFC 8332 — RSA Keys with SHA-2 Signatures](https://www.rfc-editor.org/rfc/rfc8332)
-- [RFC 8709 — Ed25519 and Ed448 Host Keys](https://www.rfc-editor.org/rfc/rfc8709)
+- [RFC 8709 — Ed25519 and Ed448 Public Key Algorithms](https://www.rfc-editor.org/rfc/rfc8709)
 - [RFC 8731 — Curve25519 and Curve448 Key Exchange](https://www.rfc-editor.org/rfc/rfc8731)
 - [RFC 9142 — Updated KEX Recommendations](https://www.rfc-editor.org/rfc/rfc9142)
+- [RFC 9519 — Updated SSH Registry Requirements](https://www.rfc-editor.org/rfc/rfc9519)
 - [RFC 9941 — Hybrid sntrup761/X25519 Key Exchange](https://www.rfc-editor.org/rfc/rfc9941)
 - [RFC 10042 — ML-KEM Hybrid Key Exchange for SSH](https://www.rfc-editor.org/rfc/rfc10042)
 
@@ -40,6 +41,20 @@ find the authoritative field layout or behavior behind a guide explanation.
 - [RFC 4256 — Keyboard-Interactive Authentication](https://www.rfc-editor.org/rfc/rfc4256)
 - [RFC 4716 — SSH Public Key File Format](https://www.rfc-editor.org/rfc/rfc4716)
 - [RFC 6187 — X.509v3 Certificates for SSH](https://www.rfc-editor.org/rfc/rfc6187)
+
+## Deployed extensions and draft specifications
+
+- [OpenSSH `PROTOCOL`](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL):
+  encrypt-then-MAC, delayed compression, forwarding extensions, and host-bound
+  public-key authentication, with links to their specifications.
+- [OpenSSH certificate format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.certkeys):
+  host and user certificates; this format is separate from RFC 6187's X.509 support.
+- [Strict KEX draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-strict-kex/02/):
+  initial-exchange ordering and sequence-number resets that address Terrapin.
+- [AES-GCM draft](https://datatracker.ietf.org/doc/draft-miller-sshm-aes-gcm/):
+  documents the deployed negotiation rules that differ from RFC 5647.
+- [Host-key update draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-hostkey-update/):
+  learning replacement host keys through an authenticated connection.
 
 ## Reading rules
 

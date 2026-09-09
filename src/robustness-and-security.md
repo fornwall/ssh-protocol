@@ -36,6 +36,20 @@ After keys are active, confidentiality hides packet contents and integrity
 protection detects changes. Packet authentication does not guarantee delivery;
 the peer or network can still stop sending.
 
+The transition into protection matters too. The exchange hash covers selected
+handshake fields, not every pre-key packet or the implicit packet counters.
+Terrapin exploited that gap: injecting ignored packets before key activation
+could let an attacker remove initial protected packets in affected modes
+without invalidating later tags. Removing extension information could change
+what the client believed the server supported.
+
+[Strict KEX](./version-and-negotiation.md#strict-key-exchange) addresses this
+by restricting initial-exchange messages and resetting sequence numbers at
+each `NEWKEYS`. Its
+[specification draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-strict-kex/02/)
+explains why valid signatures and packet tags alone did not cover that
+transition in the original protocol.
+
 ## Server proof and server trust
 
 The key-exchange signature proves control of the private key corresponding to
@@ -101,7 +115,9 @@ is hybrid.
 SSH does not hide the network endpoints, connection duration, or all traffic
 patterns. The identification strings and initial key-exchange packets are
 visible before `NEWKEYS`. Later encryption hides message contents, but an
-observer can still see packet timing and some representation of packet sizes.
+observer can still see traffic timing and TCP segment sizes. Exact SSH packet
+boundaries depend on whether the cipher exposes packet lengths; TCP segments
+are not SSH packets.
 
 Random padding obscures exact content lengths to a degree; it does not make SSH
 a traffic-flow confidentiality system. See

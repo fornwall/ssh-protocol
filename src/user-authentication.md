@@ -135,12 +135,20 @@ string    public key blob
 string    signature
 ```
 
-The signature covers the session identifier followed by the complete signed request fields, including the `TRUE` flag, algorithm, and key blob. The session identifier is the exchange hash from the first key exchange and remains unchanged across later rekeys.
+The signed data starts with the session identifier encoded as an SSH `string`,
+then the request's message-number byte and every field through the public-key
+blob. The signature field itself is excluded. Packet lengths, padding, MACs,
+and sequence numbers are also outside this signature's input.
+
+The session identifier is not an extra field in the transmitted request:
+both peers already know it from the first key exchange. Including it in the
+signed data binds the proof to that connection, and it remains unchanged
+across later rekeys.
 
 ```mermaid
 flowchart LR
-    SID["Session identifier"] --> Encode["SSH encode signed request data"]
-    Req["user · service · method<br/>TRUE · algorithm · public key"] --> Encode
+    SID["string(session identifier)<br/>known locally by both peers"] --> Encode["SSH encode signed request data"]
+    Req["message number · user · service<br/>method · TRUE · algorithm · public key"] --> Encode
     Encode --> Sign["SIGN"]
     Private["User private key"] --> Sign
     Sign --> Signature["SSH signature value"]
@@ -156,6 +164,15 @@ Binding the signature to the session identifier prevents an observed authenticat
 ### Signature algorithm versus key format
 
 The key blob and signature algorithm are related but not always named alike. For RSA, [RFC 8332](https://www.rfc-editor.org/rfc/rfc8332.html) defines the SHA-2 signature names `rsa-sha2-256` and `rsa-sha2-512` while retaining the `ssh-rsa` encoding for the RSA public-key blob. The outer signature algorithm string therefore need not equal the format name inside the key blob.
+
+Disabling `ssh-rsa` *signatures* disables RSA with SHA-1; it does not inherently
+disable RSA keys used with SHA-2. A stored RSA key can keep the same public-key
+blob and fingerprint while the signature algorithm changes.
+
+The host-key algorithm chosen during KEX also does not select the user's key
+or signature algorithm. A connection can authenticate an Ed25519 server host
+key and then authenticate the user with an RSA/SHA-2 signature. These are
+separate proofs, checked by different peers under different policies.
 
 [RFC 8709](https://www.rfc-editor.org/rfc/rfc8709.html) specifies `ssh-ed25519` and `ssh-ed448`, whose keys are used only for signing. These signatures prove possession; they do not encrypt the request or channel data.
 
@@ -289,7 +306,13 @@ flowchart TD
 
 Method-specific message numbers overlap. For example, message number 60 means `SSH_MSG_USERAUTH_PK_OK`, `SSH_MSG_USERAUTH_PASSWD_CHANGEREQ`, or `SSH_MSG_USERAUTH_INFO_REQUEST` depending on the active method. The numeric byte alone does not determine the message's meaning; the preceding method exchange supplies the necessary context.
 
-A client may abandon an in-progress method by sending a new `SSH_MSG_USERAUTH_REQUEST`. The server then abandons the previous attempt and continues with the newly named method. Requests still follow the ordering rules in [RFC 4252, Section 5.1](https://www.rfc-editor.org/rfc/rfc4252.html#section-5.1), so the active method gives method-specific replies their meaning.
+A client may abandon a method that needs further messages by sending a new
+`SSH_MSG_USERAUTH_REQUEST`, but it must first have received a response to the
+previous request. The server abandons that method without sending an extra
+`FAILURE` for the aborted exchange. For example, after receiving an interactive
+prompt, the client can switch methods instead of answering it. These ordering
+rules keep replies attributable to the correct attempt; see
+[RFC 4252, Section 5.1](https://www.rfc-editor.org/rfc/rfc4252.html#section-5.1).
 
 ## Authentication banners
 

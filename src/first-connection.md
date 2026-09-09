@@ -19,8 +19,15 @@ ssh -G example.test | less
 Then connect with verbose logging and run a harmless command:
 
 ```console
-ssh -vvv user@example.test 'printf "hello from the server\n"'
+ssh -vvv -S none user@example.test 'printf "hello from the server\n"'
 ```
+
+`-S none` disables OpenSSH connection sharing for this invocation. Otherwise,
+an existing `ControlMaster` connection could carry the command without a new
+identification exchange, key exchange, or user authentication. That would hide
+the very phases this lab is meant to observe. If the effective configuration
+uses a jump host, distinguish its connection from the final server's; see
+[SSH through a jump host](./forwarding.md#ssh-through-a-jump-host).
 
 The options are documented by the
 [OpenBSD `ssh(1)` manual](https://man.openbsd.org/ssh.1). Debug output can
@@ -96,11 +103,12 @@ Read it as evidence, not as a packet list:
 | --- | --- |
 | Both version strings | Identification exchange completed. |
 | KEX and host-key names | Both `KEXINIT` proposals had a usable match. |
-| Host key matches | Signature proof and local trust policy both passed. |
+| Host key matches | The presented key matched a local trust entry; this line alone does not prove the exchange signature was verified. |
 | Directional cipher lines | New packet-protection algorithms were selected. |
 | Methods can continue | The server rejected or answered an authentication request and supplied current policy choices. |
 | Authenticated | The client received `SSH_MSG_USERAUTH_SUCCESS`. |
-| Command and exit status | A session channel accepted `exec` and later reported status 0. |
+| Sending command | The client attempted an `exec` request; look for its success reply to confirm acceptance. |
+| Exit status 0 | The client reports that the server supplied status 0 for the command. |
 
 The log does not show every `NEWKEYS`, channel-window update, EOF, or CLOSE.
 Absence from the log is not absence from the protocol.
@@ -125,9 +133,15 @@ and selected for this connection.
 ## What a packet capture can show
 
 A capture can show the TCP connection, both textual identification lines, the
-initial unencrypted SSH packets, packet sizes, timings, and connection closure.
+initial unencrypted SSH packets, traffic sizes, timings, and connection closure.
 After `SSH_MSG_NEWKEYS`, it cannot reveal protected message contents without
 the traffic keys.
+
+Exact SSH packet boundaries may also be hidden when the negotiated cipher
+encrypts packet lengths. TCP segment sizes remain visible, but they are not
+SSH message sizes. Possession of the server's long-term host private key is
+insufficient to decrypt a recording of an ephemeral key exchange; that is the
+point of [forward secrecy](./key-exchange.md#the-basic-signed-key-exchange-flow).
 
 ```mermaid
 timeline

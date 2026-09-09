@@ -1,30 +1,38 @@
 # Identification exchange
 
-SSH starts with one line of text in each direction. After an endpoint sends
-its identification line, it may begin sending binary packets without waiting
-for the peer's line. The text-to-binary boundary is therefore directional.
-
-The exchange answers a narrow question: can the endpoints continue with SSH
-version 2? It also records implementation identifiers that later become part
-of the authenticated key-exchange transcript.
+SSH starts with one line of text in each direction. The exchange answers a
+narrow question: can the endpoints continue with SSH version 2? It also
+records implementation identifiers that later become part of the
+authenticated key-exchange transcript.
 
 ## The identification line
 
 The line has this form:
 
 ```text
-SSH-protoversion-softwareversion SP comments CR LF
+SSH-protoversion-softwareversion [SP comments] CR LF
 ```
 
-For example:
+Square brackets mark an optional part: the comment and its preceding space
+may be omitted. `SP` denotes a space, and `CR LF` denotes the line ending.
+
+For example, an OpenSSH 9.6 client might send:
 
 ```text
-SSH-2.0-GuideClient_0.1<CR><LF>
-SSH-2.0-ExampleServer_4.2 staging<CR><LF>
+SSH-2.0-OpenSSH_9.6<CR><LF>
 ```
 
-The comment and its preceding space are optional. The complete line is at
-most 255 characters including CRLF and must not contain NUL. Version `2.0`
+An Ubuntu-packaged OpenSSH server might send:
+
+```text
+SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13<CR><LF>
+```
+
+In the server example, `OpenSSH_9.6p1` is the software version and
+`Ubuntu-3ubuntu13` is the optional comment.
+
+The complete line is at most 255 characters including CRLF and must not
+contain NUL. Version `2.0`
 selects the protocol described by the SSH version 2 RFCs. The historical
 value `1.99` also advertises version 2 compatibility; it is not a separate
 protocol version.
@@ -54,7 +62,7 @@ This guide uses two related terms:
 
 Keeping the distinction avoids hashing a reconstructed or normalized value.
 
-## Server lines before SSH
+## Server lines before identification
 
 A server may send other lines before its SSH identification line. This was
 designed for notices from wrappers and gateways. A conforming client accepts
@@ -69,6 +77,9 @@ SSH-2.0-ExampleServer_4.2<CR><LF>
 Pre-identification lines must not begin with `SSH-`. They are not included in
 the exchange hash. If a client displays them, it should filter terminal
 control characters. They are peer-controlled text.
+
+The OpenSSH client does not display these lines by default; with verbose
+mode (`-v`), it displays them as debug messages.
 
 This allowance is asymmetric. The client's identification line is its first
 line on the connection.

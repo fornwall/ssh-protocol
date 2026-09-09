@@ -15,7 +15,7 @@ command or terminal settings. RFC 4254 recommends that clients reject
 server-initiated `session` opens; the normal direction is client to server.
 
 After confirmation, the client may send setup requests such as `env` and
-`pty-req`. It then sends exactly one start request:
+`pty-req`. To start a program, it chooses one of these requests:
 
 | Request | Request-specific data | Meaning |
 | --- | --- | --- |
@@ -24,6 +24,9 @@ After confirmation, the client may send setup requests such as `env` and
 | `subsystem` | subsystem name | Start a configured service such as `sftp`. |
 
 Only one of these requests can succeed on a session channel.
+If a start request fails, the client may try another request on that channel
+or close it. Once a program has started, running another program requires a
+new session channel.
 
 ```mermaid
 sequenceDiagram
@@ -61,6 +64,13 @@ string command
 A client therefore cannot infer a portable `argv` boundary from the wire.
 Quoting rules used by a command-line SSH program belong to that program and
 the remote execution environment, not to the SSH connection protocol.
+
+For example, OpenSSH's server normally passes the string to the account's
+shell with `-c`. A string such as `printf '%s\n' "$HOME"` therefore asks the
+remote shell to expand its own `HOME`. Local shell quoting determines which
+bytes reach the SSH client in the first place. These are two distinct rounds
+of interpretation; SSH does not provide escaping between them. See the
+[OpenBSD `sshd(8)` execution description](https://man.openbsd.org/sshd#LOGIN_PROCESS).
 
 ## A PTY changes the byte-stream environment
 
@@ -135,6 +145,21 @@ exit report, EOF, and CLOSE as separate events. TCP EOF is not a substitute
 for an SSH exit status: it ends the entire transport and may leave the command
 result unknown.
 
+Both exit reports use `want_reply = false`. RFC 4254 recommends returning a
+status but does not require it, so even a complete channel CLOSE handshake can
+leave the process result unknown. `CHANNEL_SUCCESS` for `exec` means that the
+start request was accepted, not that the command eventually exited with zero.
+See [RFC 4254 section 6.10](https://www.rfc-editor.org/rfc/rfc4254#section-6.10).
+
+If the transport disappears after an `exec` request, the client may not know
+whether the command started, finished, or changed remote state. Even losing
+the connection before its success reply arrives does not prove that the
+request was never accepted. Reconnecting starts a new SSH connection; the core
+protocol has no operation to recover the old channel or its missing result.
+For example, retrying a command that appends a line to a file can append it
+twice. Such uncertainty needs an application-level way to check the result
+before retrying.
+
 ```mermaid
 sequenceDiagram
     participant C as Client
@@ -148,6 +173,33 @@ sequenceDiagram
     S-->>C: CLOSE
     C->>S: CLOSE
 ```
+
+## Worked exchange: send input and collect a result
+
+Consider an authenticated connection that starts `cat` without a PTY. The
+client calls the channel `7`; the server calls it `42`. Both advertise a
+receive window of 16 bytes and a maximum data size of 8 bytes per message.
+These tiny limits make the accounting visible; they are not suggested settings.
+
+| Direction | Message or event | What changes |
+| --- | --- | --- |
+| C → S | `CHANNEL_OPEN("session", sender=7, window=16, max=8)` | Client offers 16 bytes of receive credit. |
+| S → C | `OPEN_CONFIRMATION(recipient=7, sender=42, window=16, max=8)` | Client learns the server ID and its receive credit. |
+| C → S | `CHANNEL_REQUEST(recipient=42, "exec", reply=true, "cat")` | Client asks to start the command. |
+| S → C | `CHANNEL_SUCCESS(recipient=7)` | Start request accepted; no process result yet. |
+| C → S | `CHANNEL_DATA(recipient=42, "hello\n")` | Six data bytes reduce server-granted credit from 16 to 10. |
+| C → S | `CHANNEL_EOF(recipient=42)` | No more input; output remains open. |
+| S → C | `CHANNEL_DATA(recipient=7, "hello\n")` | Six output bytes reduce client-granted credit from 16 to 10. |
+| S → C | `CHANNEL_EOF(recipient=7)` | No more output; channel requests can still arrive. |
+| S → C | `CHANNEL_REQUEST(recipient=7, "exit-status", reply=false, 0)` | Server reports successful process completion. |
+| S → C | `CHANNEL_CLOSE(recipient=7)` | Server starts the channel close handshake. |
+| C → S | `CHANNEL_CLOSE(recipient=42)` | Close completes; each peer may reuse its ID. |
+
+Here `\n` denotes one LF byte. Control messages consume no channel credit,
+and the six bytes fit both advertised limits, so no `WINDOW_ADJUST` is needed.
+This is one valid ordering: `cat` may echo input before the client sends EOF,
+and the exit report may arrive before the server's EOF. The events remain
+distinct in either ordering.
 
 ## Subsystems
 

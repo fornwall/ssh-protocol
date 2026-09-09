@@ -75,7 +75,7 @@ By the end of the guide, you should be able to:
 - read SSH's binary types and packet framing at the level needed to follow a
   protocol trace;
 - explain what the client must verify before accepting a server;
-- reason about how channel flow control keeps multiplexed streams independent;
+- reason about per-channel flow control and the limits of sharing one transport;
   and
 - diagnose failures by protocol phase instead of guessing from a final error.
 
@@ -93,8 +93,9 @@ The cryptography primer treats each primitive as a black box with explicit
 inputs, outputs, and required checks.
 
 > **Security boundary:** The sketches in this guide explain the protocol; they
-> are not recipes for implementing cryptography. Never “temporarily” accept an
-> unknown or changed host key to get past a connection error.
+> are not recipes for implementing cryptography. Before accepting an unknown
+> or changed host key, establish why it represents the intended server. A
+> connection error is not evidence that a replacement key is trustworthy.
 
 Unless a chapter says otherwise, *protected transport* means that safe client
 policy selected confidentiality and integrity. SSH also registers `none`

@@ -57,8 +57,10 @@ name appeared in both KEXINIT proposals and that it was the first mutually
 supported value in the client's corresponding list. To prove that inference
 from the wire, you would need both complete proposals.
 
-Similarly, seeing ciphertext after `NEWKEYS` proves that protected packet bytes
-were exchanged, not that user authentication or a command succeeded.
+Similarly, opaque bytes after `NEWKEYS` show traffic where protected packets
+are expected. A passive capture without keys cannot verify their tags or
+prove that either endpoint accepted them. Endpoint logs are needed to connect
+that traffic to authentication or command success.
 
 ## TCP segments are not SSH packets
 
@@ -110,7 +112,7 @@ rotation through an independent channel before updating the narrow binding.
 
 Track each `SSH_MSG_USERAUTH_FAILURE` as a pair: its current method list and
 `partial success` flag. A valid public-key signature can be accepted as one
-factor without completing authentication. Method number 60 must be interpreted
+factor without completing authentication. Message number 60 must be interpreted
 from the active method state, not from the number alone.
 
 ```mermaid
@@ -131,6 +133,17 @@ window must wait for `WINDOW_ADJUST`; the other channel direction and other
 logical channels may continue. Local EOF ends only one data direction. Final
 output and exit status may legitimately arrive after the client has sent EOF.
 
+If several channels stall together, examine the shared TCP connection and
+whether a rekey is in progress. If one command stalls while other channels
+work, check both stdout and stderr consumption: they share that command's
+receive credit. A process may also be waiting for input EOF rather than for
+more window space.
+
+A successful [SSH keepalive exchange](./channels.md#keepalives-and-evidence-of-liveness)
+shows that the SSH peer is responsive. It does not establish progress on the
+stalled channel. If the connection is lost, keep an unknown command outcome
+distinct from a reported failure before deciding whether to retry.
+
 ```mermaid
 flowchart TD
     Stall["No channel data moving"] --> W{"Remote window zero?"}
@@ -140,6 +153,7 @@ flowchart TD
     Req -- yes --> Close{"EOF or CLOSE observed?"}
     Close -- EOF only --> Half["Only one direction ended"]
     Close -- CLOSE both ways --> Done["Channel finished"]
+    Close -- neither --> App["Remote program · pending input<br/>shared transport or rekey"]
 ```
 
 ## Read disconnects in context
