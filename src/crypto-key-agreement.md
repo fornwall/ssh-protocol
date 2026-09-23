@@ -126,6 +126,20 @@ decision about that host key. See
 [The host-key signature and the trust decision](./key-exchange.md#the-host-key-signature-and-the-trust-decision)
 and [Server authentication](./server-authentication.md).
 
+The figure below runs both exchanges with toy numbers. Its defaults are the
+`p = 23` example from the deep dive that follows; switch on the attacker to see
+two different secrets, and see which check catches the substitution. The toy
+elliptic curve from the
+[elliptic-curve deep dive](#elliptic-curves) is the second mode.
+
+<div class="ssh-widget" data-widget="dh">
+<p class="w-fallback">Interactive figure: a toy Diffie–Hellman exchange with
+p = 23 and g = 5. The client sends e = 5^6 mod 23 = 8, the server sends
+f = 5^15 mod 23 = 19, and both compute K = 2. An attacker in the middle with
+its own secrets would share K1 = 18 with the client and K2 = 10 with the
+server, and only the host-key signature and trust check expose it.</p>
+</div>
+
 <details>
 <summary>Go deeper: modular arithmetic and the discrete logarithm</summary>
 

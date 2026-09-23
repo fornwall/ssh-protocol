@@ -1,0 +1,141 @@
+/* Toy Diffie–Hellman figure (dh.js). */
+.w-dh .dh-params {
+    margin: 0.4em 0;
+}
+
+.w-dh input[type="number"] {
+    width: 7em;
+}
+
+.w-dh input[aria-invalid="true"] {
+    border-color: var(--w-bad);
+}
+
+.w-dh .dh-attacker-fields {
+    padding: 0.2em 0.8em 0.4em;
+    border-left: 4px solid var(--w-bad);
+    background: var(--w-tag-4);
+    border-radius: 3px;
+}
+
+.w-dh .dh-attacker-fields select {
+    max-width: 100%;
+}
+
+.w-dh .dh-parties {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15em, 1fr));
+    gap: 0.6em;
+    margin-top: 0.8em;
+}
+
+.w-dh .dh-party {
+    padding: 0.4em 0.7em;
+    border-radius: 4px;
+    background: var(--bg);
+    border-top: 4px solid var(--quote-border);
+    min-width: 0;
+}
+
+.w-dh .dh-client { border-top-color: rgb(66, 135, 245); }
+.w-dh .dh-server { border-top-color: rgb(155, 89, 182); }
+.w-dh .dh-attacker { border-top-color: var(--w-bad); }
+
+.w-dh .dh-party-title,
+.w-dh .dh-heading {
+    margin: 0.3em 0;
+    font-weight: bold;
+}
+
+.w-dh .dh-heading {
+    margin-top: 0.9em;
+}
+
+.w-dh dl {
+    margin: 0;
+}
+
+.w-dh dt {
+    font-size: 0.85em;
+    opacity: 0.8;
+}
+
+.w-dh dd {
+    margin: 0 0 0.35em;
+    overflow-wrap: anywhere;
+}
+
+.w-dh .dh-wire {
+    margin: 0.3em 0;
+    padding-left: 1.6em;
+}
+
+.w-dh .dh-wire > li {
+    margin-bottom: 0.4em;
+}
+
+.w-dh .dh-wire ul {
+    margin: 0.1em 0 0;
+    padding-left: 1.2em;
+    list-style: none;
+}
+
+.w-dh .dh-arrow {
+    white-space: nowrap;
+}
+
+.w-dh .dh-bytes {
+    opacity: 0.7;
+    overflow-wrap: anywhere;
+}
+
+.w-dh .w-status p {
+    margin: 0.2em 0;
+}
+
+.w-dh .dh-eve {
+    padding: 0.1em 0.8em;
+    background: var(--w-tag-6);
+    border-radius: 4px;
+}
+
+.w-dh .dh-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0.4em 0;
+    padding: 0;
+    list-style: none;
+}
+
+.w-dh .dh-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 4.6em;
+    padding: 0.2em 0.3em;
+    font-size: 0.85em;
+    border: 1px solid var(--quote-border);
+    border-radius: 4px;
+    background: var(--bg);
+}
+
+.w-dh .dh-chip.dh-marked {
+    background: var(--w-tag-2);
+}
+
+.w-dh .dh-chip.dh-current {
+    outline: 2px solid var(--links);
+}
+
+.w-dh .dh-tag {
+    min-height: 1.2em;
+    font-weight: bold;
+}
+
+.w-dh .dh-step {
+    padding: 0.4em 0.7em;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow-wrap: anywhere;
+}
