@@ -28,6 +28,27 @@ just view
 
 Mermaid is configured as an mdBook preprocessor, and its browser assets are kept in the repository so diagrams also work offline. After upgrading `mdbook-mermaid`, run `just install-mermaid` to refresh those assets.
 
+## Publish
+
+Run `just publish` to check, build, and deploy the guide to
+[ssh.fornwall.net](https://ssh.fornwall.net) using Cloudflare Pages
+[Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/).
+`just deploy` is an alias for the same task.
+
+Publishing requires Node.js and npm in addition to the authoring tools. The task
+runs a pinned version of Wrangler through `npx` and uses the `ssh-fornwall-net`
+Pages project. It always deploys to the production branch, `main`, regardless of
+the local Git branch, and publishes the current working tree.
+
+Authenticate with `npx --yes wrangler@4.129.0 login`, or provide a token with
+Cloudflare Pages Edit permission in `CLOUDFLARE_API_TOKEN` (the existing
+`CLOUDFLARE_PAGES_EDIT_API_TOKEN` variable is also supported). Credentials stay
+outside the repository.
+
+The project's custom domain is `ssh.fornwall.net`. Its Cloudflare DNS record must
+be a proxied CNAME pointing to `ssh-fornwall-net.pages.dev`. This is a one-time
+setup; subsequent publishes update the site without changing DNS.
+
 ## Protocol references
 
 - [RFC 4251 — SSH Protocol Architecture](https://www.rfc-editor.org/rfc/rfc4251)

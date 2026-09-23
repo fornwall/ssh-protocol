@@ -2,6 +2,10 @@
 /book/
 /dist/
 
+# Wrangler's local deployment cache
+/node_modules/
+/.wrangler/
+
 # Editor and operating-system files
 .DS_Store
 .idea/

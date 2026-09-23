@@ -4,6 +4,9 @@ book_dir := "book"
 dist_dir := "dist"
 host := "127.0.0.1"
 port := "3000"
+pages_project := "ssh-fornwall-net"
+cloudflare_account_id := "c494646a87f38a82ce35ea24edaada52"
+wrangler_version := "4.129.0"
 
 # Show the available project tasks.
 default:
@@ -67,7 +70,11 @@ package version="dev": build
 clean:
     rm -rf "{{ book_dir }}" "{{ dist_dir }}"
 
-# Deployment is intentionally deferred until a target has been chosen.
-deploy:
-    @printf '%s\n' 'Deployment is not implemented yet.' >&2
-    @exit 1
+# Check, build, and publish the book to https://ssh.fornwall.net.
+publish: check
+    @CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN:-${CLOUDFLARE_PAGES_EDIT_API_TOKEN:-}}" \
+      CLOUDFLARE_ACCOUNT_ID="{{ cloudflare_account_id }}" \
+      npx --yes "wrangler@{{ wrangler_version }}" pages deploy "{{ book_dir }}" \
+        --project-name "{{ pages_project }}" --branch main
+
+alias deploy := publish
