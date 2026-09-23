@@ -16,9 +16,10 @@ bound into a signed key exchange.
 ## From host-key proof to server identity
 
 [Key exchange](./key-exchange.md) explains how the server signs the exchange
-hash `H`. The client verifies that signature with the public host key carried
-in the key-exchange reply. This proves control of the matching private key and
-binds the proof to this exchange.
+hash `H`. The client verifies that
+[signature](./crypto-signatures.md#signatures-as-a-black-box) with the public
+host key carried in the key-exchange reply. This proves control of the
+matching private key and binds the proof to this exchange.
 
 The proof does not name a network destination. An attacker can complete the
 same protocol with the attacker's own host key. The client must also apply a
@@ -75,7 +76,12 @@ TOFU detects an attacker who appears only after a trustworthy first connection. 
 With CA-based trust, the client trusts a CA public key and accepts host identities certified under it, subject to certificate names and validity policy. This moves the maintenance problem from every host key to a smaller set of CA keys.
 
 The deployed OpenSSH certificate format wraps a host public key with signed
-metadata. A client validates at least:
+metadata; [Certificates](./crypto-signatures.md#certificates) explains the
+signature structure. A client that wants a certificate lists names such as
+`ssh-ed25519-cert-v01@openssh.com` in its host-key algorithm proposal. If one
+is selected, the certificate takes the place of the plain host key as `K_S`,
+and the server still signs `H` with the certified key's private half. A
+client validates at least:
 
 - that the certificate is a host certificate, not a user certificate;
 - the CA signature and local trust in that CA;
@@ -83,12 +89,17 @@ metadata. A client validates at least:
 - the validity interval and revocation policy; and
 - every critical option it must understand to accept the certificate.
 
+If the certificate fails these checks, the certificate specification allows a
+client to fall back to treating the certified key as a plain host key. That
+key then needs an ordinary trust entry; a failed certificate grants nothing.
+
 The key identifier is useful for logs and revocation, but it is not the
 hostname match. OpenSSH records trusted host CAs with an `@cert-authority`
 marker in `known_hosts`. The format is a deployed extension rather than an
 X.509 certificate. See the
-[OpenSSH certificate specification](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.certkeys)
-and the [`sshd(8)` known-hosts format](https://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT).
+[SSH certificate format Internet-Draft](https://datatracker.ietf.org/doc/draft-miller-ssh-cert/),
+which replaced OpenSSH's former `PROTOCOL.certkeys` file, and the
+[`sshd(8)` known-hosts format](https://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT).
 
 ## The `known_hosts` database
 
@@ -124,7 +135,9 @@ A jump host transports bytes toward the final server; it does not replace final-
 
 ## Fingerprints and key formats
 
-A fingerprint is a compact digest of a public key blob. It is useful for comparing keys over a human channel, but it is not an identity by itself: the trusted statement must bind the fingerprint to a particular hostname or host role.
+A [fingerprint](./crypto-hashes.md#fingerprints) is a compact digest of a public key blob. OpenSSH's default form, such as `SHA256:` followed by Base64 text, names the hash and encodes its output. It is useful for comparing keys over a human channel, but it is not an identity by itself: the trusted statement must bind the fingerprint to a particular hostname or host role.
+
+Compare the complete fingerprint, not just its first and last few characters. A hash makes it infeasible to find a different key with the same full digest, but an attacker can cheaply generate keys until a short prefix or suffix matches; the [cost table](./crypto-hashes.md#compare-the-whole-fingerprint) shows how cheaply. A fingerprint is also only as trustworthy as the channel that delivered the reference value.
 
 Do not confuse these representations:
 
@@ -198,3 +211,4 @@ safe only after the trust database is updated from authenticated information.
 - [RFC 8709: Ed25519 and Ed448 Public Key Algorithms for SSH](https://www.rfc-editor.org/rfc/rfc8709.html).
 - [OpenBSD `sshd(8)`: SSH known-hosts file format](https://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT).
 - [OpenSSH host-key update Internet-Draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-hostkey-update/).
+- [SSH certificate format Internet-Draft](https://datatracker.ietf.org/doc/draft-miller-ssh-cert/).

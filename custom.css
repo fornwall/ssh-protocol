@@ -1,0 +1,27 @@
+/* Collapsible "go deeper" sections and answer blocks. */
+details {
+    margin: 1.25em 0;
+    padding: 0 1em;
+    border: 1px solid var(--quote-border);
+    border-left: 4px solid var(--links);
+    border-radius: 4px;
+    background: var(--quote-bg);
+}
+
+details > summary {
+    padding: 0.6em 0;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+details[open] > summary {
+    margin-bottom: 0.5em;
+    border-bottom: 1px solid var(--quote-border);
+}
+
+/* Keep wide formulas and tables readable inside a collapsed section. */
+details pre,
+details table {
+    max-width: 100%;
+    overflow-x: auto;
+}

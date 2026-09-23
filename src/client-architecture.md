@@ -57,7 +57,8 @@ the SSH client.
 
 SSH protects client-to-server and server-to-client traffic separately. Each
 direction has its own cipher state, integrity state, packet sequence number,
-and `NEWKEYS` transition.
+and `NEWKEYS` transition. Even the keys differ: key derivation produces
+separate [directional keys](./crypto-hashes.md#key-derivation-in-ssh).
 
 ```mermaid
 sequenceDiagram

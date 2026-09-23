@@ -106,9 +106,11 @@ active attacker can change bytes before key exchange has authenticated the
 connection.
 
 Key exchange later hashes the exact client and server identification strings
-into the exchange hash. The server signs that hash. A simple in-transit change
+into the
+[exchange hash](./key-exchange.md#the-exchange-hash-authenticate-the-whole-decision).
+The server signs that hash. A simple in-transit change
 makes the client and server compute different hashes, so signature verification
-fails. A full man-in-the-middle can instead conduct two self-consistent
+fails. A full machine-in-the-middle can instead conduct two self-consistent
 exchanges and sign one with a substituted host key; the client's host-key trust
 check rejects that case.
 
@@ -125,6 +127,20 @@ them.
    20 bytes?
 4. Why can a passive observer read an identification string even though the
    string is authenticated later?
+
+<details>
+<summary>Answers</summary>
+
+1. The server can send other lines first, as long as none begins with `SSH-`.
+   The client cannot: its identification line is its first line.
+2. No. The exchange hash uses the identification string, which excludes the
+   CR and LF.
+3. The first 20 bytes of the server's first binary packet, normally the start
+   of its `SSH_MSG_KEXINIT` packet.
+4. Authentication detects modification after the fact; it does not encrypt.
+   The lines are sent before any keys exist and are never encrypted.
+
+</details>
 
 ## References
 

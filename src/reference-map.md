@@ -22,11 +22,11 @@ find the authoritative field layout or behavior behind a guide explanation.
 ## Algorithms and extensions used in this guide
 
 - [RFC 4419 — Diffie-Hellman Group Exchange](https://www.rfc-editor.org/rfc/rfc4419)
-- [RFC 4344 — SSH Transport-Layer Encryption Modes](https://www.rfc-editor.org/rfc/rfc4344)
 - [RFC 5656 — Elliptic Curve Algorithms for SSH](https://www.rfc-editor.org/rfc/rfc5656)
 - [RFC 5647 — AES-GCM for SSH](https://www.rfc-editor.org/rfc/rfc5647)
 - [RFC 6668 — SHA-2 Data Integrity Verification](https://www.rfc-editor.org/rfc/rfc6668)
 - [RFC 8268 — SHA-2 with finite-field DH](https://www.rfc-editor.org/rfc/rfc8268)
+- [RFC 8270 — 2048-bit Minimum for DH Group Exchange](https://www.rfc-editor.org/rfc/rfc8270)
 - [RFC 8308 — Extension Negotiation](https://www.rfc-editor.org/rfc/rfc8308)
 - [RFC 8332 — RSA Keys with SHA-2 Signatures](https://www.rfc-editor.org/rfc/rfc8332)
 - [RFC 8709 — Ed25519 and Ed448 Public Key Algorithms](https://www.rfc-editor.org/rfc/rfc8709)
@@ -41,20 +41,91 @@ find the authoritative field layout or behavior behind a guide explanation.
 - [RFC 4256 — Keyboard-Interactive Authentication](https://www.rfc-editor.org/rfc/rfc4256)
 - [RFC 4716 — SSH Public Key File Format](https://www.rfc-editor.org/rfc/rfc4716)
 - [RFC 6187 — X.509v3 Certificates for SSH](https://www.rfc-editor.org/rfc/rfc6187)
+- [RFC 9987 — SSH Agent Protocol](https://www.rfc-editor.org/rfc/rfc9987):
+  the protocol behind `ssh-agent` and agent forwarding.
 
 ## Deployed extensions and draft specifications
 
 - [OpenSSH `PROTOCOL`](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL):
   encrypt-then-MAC, delayed compression, forwarding extensions, and host-bound
   public-key authentication, with links to their specifications.
-- [OpenSSH certificate format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.certkeys):
-  host and user certificates; this format is separate from RFC 6187's X.509 support.
+- [SSH certificate format draft](https://datatracker.ietf.org/doc/draft-miller-ssh-cert/):
+  OpenSSH host and user certificates, formerly documented in OpenSSH's
+  `PROTOCOL.certkeys`; this format is separate from RFC 6187's X.509 support.
+- [ChaCha20-Poly1305 for SSH draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-chacha20-poly1305/):
+  the `chacha20-poly1305@openssh.com` packet construction, formerly OpenSSH's
+  `PROTOCOL.chacha20poly1305`.
+- [OpenSSH `PROTOCOL.u2f`](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.u2f):
+  `sk-` security-key formats and their signature encoding.
 - [Strict KEX draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-strict-kex/02/):
   initial-exchange ordering and sequence-number resets that address Terrapin.
 - [AES-GCM draft](https://datatracker.ietf.org/doc/draft-miller-sshm-aes-gcm/):
   documents the deployed negotiation rules that differ from RFC 5647.
 - [Host-key update draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-hostkey-update/):
   learning replacement host keys through an authenticated connection.
+
+## Cryptographic primitives
+
+SSH method names select these primitives; their own specifications define the
+mathematics and test vectors.
+
+- [FIPS 180-4 — Secure Hash Standard](https://csrc.nist.gov/pubs/fips/180-4/upd1/final):
+  SHA-1 and the SHA-2 family used in exchange hashes, key derivation, and MACs.
+- [RFC 2104 — HMAC](https://www.rfc-editor.org/rfc/rfc2104): the keyed-hash
+  construction behind the `hmac-*` MAC names.
+- [FIPS 197 — Advanced Encryption Standard](https://csrc.nist.gov/pubs/fips/197/final):
+  the AES block cipher.
+- [RFC 4344 — SSH Transport-Layer Encryption Modes](https://www.rfc-editor.org/rfc/rfc4344):
+  the `aes*-ctr` modes and rekeying guidance based on cipher block size.
+- [NIST SP 800-38D — Galois/Counter Mode](https://csrc.nist.gov/pubs/sp/800/38/d/final):
+  AES-GCM authenticated encryption.
+- [RFC 5116 — An Interface and Algorithms for Authenticated Encryption](https://www.rfc-editor.org/rfc/rfc5116):
+  the general AEAD interface.
+- [RFC 8439 — ChaCha20 and Poly1305](https://www.rfc-editor.org/rfc/rfc8439):
+  the stream cipher and one-time authenticator; SSH's construction differs
+  from the RFC's AEAD mode in detail.
+- [RFC 3526 — More MODP Diffie–Hellman Groups](https://www.rfc-editor.org/rfc/rfc3526):
+  the 2048-bit and larger groups used by the `diffie-hellman-group*` methods.
+- [RFC 7748 — Elliptic Curves for Security](https://www.rfc-editor.org/rfc/rfc7748):
+  X25519 and X448.
+- [FIPS 186-5 — Digital Signature Standard](https://csrc.nist.gov/pubs/fips/186-5/final):
+  ECDSA, EdDSA, and RSA signatures.
+- [RFC 8017 — PKCS #1 v2.2](https://www.rfc-editor.org/rfc/rfc8017): RSA and
+  the PKCS #1 v1.5 signature encoding used by `rsa-sha2-*`.
+- [RFC 6979 — Deterministic DSA and ECDSA](https://www.rfc-editor.org/rfc/rfc6979):
+  deriving the per-signature nonce without a random generator.
+- [RFC 8032 — Edwards-Curve Digital Signature Algorithm](https://www.rfc-editor.org/rfc/rfc8032):
+  Ed25519 and Ed448.
+- [FIPS 203 — ML-KEM](https://csrc.nist.gov/pubs/fips/203/final): the
+  module-lattice KEM in the `mlkem*` hybrid methods.
+- [NTRU Prime](https://ntruprime.cr.yp.to/): the Streamlined NTRU Prime KEM
+  behind `sntrup761x25519-sha512`.
+- [RFC 4086 — Randomness Requirements for Security](https://www.rfc-editor.org/rfc/rfc4086):
+  why cookies, ephemeral secrets, and padding need a strong random source.
+
+## Learning cryptography
+
+These free resources go further than the guide's Go deeper sections:
+
+- [*The Joy of Cryptography*](https://joyofcryptography.com/) by Mike
+  Rosulek: an undergraduate textbook that builds security definitions
+  step by step.
+- [*A Graduate Course in Applied Cryptography*](https://toc.cryptobook.us/)
+  by Dan Boneh and Victor Shoup: a thorough treatment of symmetric
+  encryption, MACs, key exchange, and signatures.
+- [*Crypto 101*](https://www.crypto101.io/): an introductory book aimed at
+  programmers.
+- [*Handbook of Applied Cryptography*](https://cacr.uwaterloo.ca/hac/): a
+  classic 1996 reference whose chapters are freely available, including the
+  number theory behind classical public-key algorithms.
+- [*Understanding Cryptography*](https://www.crypto-textbook.com/) by Christof
+  Paar and colleagues: the companion site links free lecture videos.
+- [Dan Boneh's Cryptography I](https://www.coursera.org/learn/crypto): an
+  online course from stream ciphers and MACs to basic key exchange.
+- [A relatively easy to understand primer on elliptic curve cryptography](https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/):
+  an illustrated introduction to the curves used by ECDH and ECDSA.
+- [The Cryptopals challenges](https://cryptopals.com/): exercises that break
+  real constructions, useful for building intuition about misuse.
 
 ## Reading rules
 

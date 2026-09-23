@@ -95,7 +95,7 @@ The server must not advertise `none` in its method list. It accepts `none` only 
 
 ## Public-key authentication
 
-Public-key authentication proves possession of a user's private key. The server performs two independent checks:
+Public-key authentication proves possession of a user's private key with a [digital signature](./crypto-signatures.md#signatures-as-a-black-box). The server performs two independent checks:
 
 1. Is this public key authorized for this user under current policy?
 2. Does the signature verify with that public key?
@@ -163,7 +163,7 @@ Binding the signature to the session identifier prevents an observed authenticat
 
 ### Signature algorithm versus key format
 
-The key blob and signature algorithm are related but not always named alike. For RSA, [RFC 8332](https://www.rfc-editor.org/rfc/rfc8332.html) defines the SHA-2 signature names `rsa-sha2-256` and `rsa-sha2-512` while retaining the `ssh-rsa` encoding for the RSA public-key blob. The outer signature algorithm string therefore need not equal the format name inside the key blob.
+The key blob and signature algorithm are related but not always named alike. For [RSA](./crypto-signatures.md#rsa), [RFC 8332](https://www.rfc-editor.org/rfc/rfc8332.html) defines the SHA-2 signature names `rsa-sha2-256` and `rsa-sha2-512` while retaining the `ssh-rsa` encoding for the RSA public-key blob. The outer signature algorithm string therefore need not equal the format name inside the key blob.
 
 Disabling `ssh-rsa` *signatures* disables RSA with SHA-1; it does not inherently
 disable RSA keys used with SHA-2. A stored RSA key can keep the same public-key
@@ -174,7 +174,7 @@ or signature algorithm. A connection can authenticate an Ed25519 server host
 key and then authenticate the user with an RSA/SHA-2 signature. These are
 separate proofs, checked by different peers under different policies.
 
-[RFC 8709](https://www.rfc-editor.org/rfc/rfc8709.html) specifies `ssh-ed25519` and `ssh-ed448`, whose keys are used only for signing. These signatures prove possession; they do not encrypt the request or channel data.
+[RFC 8709](https://www.rfc-editor.org/rfc/rfc8709.html) specifies `ssh-ed25519` and `ssh-ed448`, whose keys are used only for signing; see [Ed25519](./crypto-signatures.md#ed25519). These signatures prove possession; they do not encrypt the request or channel data.
 
 A private-key *passphrase* is also distinct from the account password. The passphrase usually decrypts a local private-key file or unlocks a signing device. It should not be placed in an SSH userauth packet. A signing agent can return a signature without disclosing the private key to the SSH client.
 
@@ -196,6 +196,58 @@ absent, the client cannot infer that a particular algorithm is unsupported.
 
 [RFC 8308, Section 3.1](https://www.rfc-editor.org/rfc/rfc8308.html#section-3.1)
 defines `server-sig-algs` and its timing.
+
+### User certificates
+
+OpenSSH also lets a user authenticate with a
+[certificate](./crypto-signatures.md#certificates): the user's public key plus
+metadata, signed by a user certification authority (CA). The metadata names
+the *principals* the key may log in as, a validity interval, *critical
+options* such as `force-command` or `source-address`, and *extensions* such
+as `permit-pty`.
+
+The client offers a certificate like any other key. The `publickey` request
+carries a certificate algorithm name, such as
+`ssh-ed25519-cert-v01@openssh.com`, and the encoded certificate in place of
+the plain key blob. The signature is still made by the certified key's
+private half, in the plain algorithm's signature format, over the usual
+session-bound data.
+
+The server's two checks keep their shape, but the authorization check changes.
+Instead of looking for this exact key in a per-account list, the server
+trusts a user CA key, in OpenSSH through
+[`TrustedUserCAKeys`](https://man.openbsd.org/sshd_config#TrustedUserCAKeys) or
+a `cert-authority` line in `authorized_keys`. It then verifies the CA's
+signature, confirms that the certificate is a user certificate and currently
+valid, maps the requested user name to an acceptable principal, and refuses
+any critical option it does not understand. The user's signature still has to
+verify with the certified key.
+
+This moves key distribution from every server to the CA, much as host
+certificates do for clients. A short validity interval also limits how long a
+lost key remains useful. The format is specified in the
+[SSH certificate Internet-Draft](https://datatracker.ietf.org/doc/draft-miller-ssh-cert/).
+
+### Hardware-backed security keys
+
+Names such as `sk-ssh-ed25519@openssh.com` and
+`sk-ecdsa-sha2-nistp256@openssh.com` identify
+[hardware-backed keys](./crypto-signatures.md#hardware-backed-keys) whose
+private half stays inside a FIDO authenticator, such as a USB security key.
+Two protocol-visible differences matter:
+
+- the public-key blob adds an *application* string, typically `ssh:`; and
+- the signature carries a flags byte and a signature counter, because the
+  authenticator signs a structure containing them along with a hash of the
+  usual SSH signed data.
+
+The flags record whether the user confirmed presence, typically by touching
+the device, and optionally whether the device verified the user, for example
+with a PIN. The server checks those flags against its policy. OpenSSH
+requires user presence by default. A security key is still one authentication
+factor from the server's point of view. The
+[FIDO security keys](./fido-security-keys.md) chapter covers these keys in
+detail.
 
 ### Host-bound public-key authentication
 
@@ -350,3 +402,5 @@ For every message, record the active authentication method and whether the packe
 - [RFC 4716: The Secure Shell (SSH) Public Key File Format](https://www.rfc-editor.org/rfc/rfc4716.html).
 - [RFC 8332: Use of RSA Keys with SHA-256 and SHA-512 in SSH](https://www.rfc-editor.org/rfc/rfc8332.html).
 - [RFC 8709: Ed25519 and Ed448 Public Key Algorithms for SSH](https://www.rfc-editor.org/rfc/rfc8709.html).
+- [SSH certificate format Internet-Draft](https://datatracker.ietf.org/doc/draft-miller-ssh-cert/).
+- [OpenSSH `PROTOCOL.u2f`](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.u2f): security-key formats and signatures.

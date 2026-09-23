@@ -26,7 +26,7 @@ just view
 
 `just view` serves the book locally and opens it in a browser. Run `just` to see all available tasks, including build, lint, test, package, and clean.
 
-Mermaid is configured as an mdBook preprocessor, and its browser assets are kept in the repository so diagrams also work offline. After upgrading `mdbook-mermaid`, run `just install-mermaid` to refresh those assets.
+Mermaid is configured as an mdBook preprocessor, and its browser assets are kept in the repository so diagrams also work offline. After upgrading `mdbook-mermaid`, run `just install-mermaid` to refresh those assets. `custom.css` styles the collapsible `<details>` blocks used for “Go deeper” sections and answers.
 
 ## Publish
 
@@ -58,11 +58,14 @@ setup; subsequent publishes update the site without changing DNS.
 - [RFC 4256 — Generic Message Exchange Authentication](https://www.rfc-editor.org/rfc/rfc4256)
 - [RFC 4716 — SSH Public Key File Format](https://www.rfc-editor.org/rfc/rfc4716)
 - [RFC 5656 — Elliptic Curve Algorithms for SSH](https://www.rfc-editor.org/rfc/rfc5656)
+- [RFC 8308 — Extension Negotiation in SSH](https://www.rfc-editor.org/rfc/rfc8308)
 - [RFC 8332 — Use of RSA Keys with SHA-2](https://www.rfc-editor.org/rfc/rfc8332)
 - [RFC 8709 — Ed25519 and Ed448 Host Key Algorithms](https://www.rfc-editor.org/rfc/rfc8709)
+- [RFC 8731 — Curve25519 and Curve448 Key Exchange](https://www.rfc-editor.org/rfc/rfc8731)
 - [RFC 9142 — Key Exchange Method Updates and Recommendations](https://www.rfc-editor.org/rfc/rfc9142)
 - [RFC 9519 — SSH Registry Requirements](https://www.rfc-editor.org/rfc/rfc9519)
 - [RFC 9941 — Hybrid sntrup761/X25519 Key Exchange](https://www.rfc-editor.org/rfc/rfc9941)
+- [RFC 9987 — SSH Agent Protocol](https://www.rfc-editor.org/rfc/rfc9987)
 - [RFC 10042 — ML-KEM Hybrid Key Exchange for SSH](https://www.rfc-editor.org/rfc/rfc10042)
 - [Strict KEX Internet-Draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-strict-kex/)
 - [IANA SSH Protocol Parameters](https://www.iana.org/assignments/ssh-parameters/ssh-parameters.xhtml)
@@ -81,8 +84,15 @@ For a general overview and history, see [Secure Shell on Wikipedia](https://en.w
 ## Status
 
 The guide covers identification, packet framing, negotiation, key exchange,
-host and user authentication, sessions, forwarding, security analysis, and
-trace-based diagnosis.
+host and user authentication (including FIDO security keys), sessions,
+forwarding, security analysis, and trace-based diagnosis.
+
+A cryptography part explains the primitives SSH relies on: hashes, MACs, and
+key derivation; symmetric packet protection; Diffie–Hellman and elliptic-curve
+key agreement; digital signatures; and post-quantum key exchange. Each chapter
+presents its primitive as a black box first, with optional collapsible
+“Go deeper” sections for the underlying math. A glossary and a reference map
+close the guide.
 
 ## License
 

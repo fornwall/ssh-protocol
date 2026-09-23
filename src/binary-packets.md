@@ -159,8 +159,10 @@ larger. The padding length is chosen to meet that alignment. Padding frustrates
 simple traffic-size analysis, but it does not hide timing or make all messages
 the same size.
 
-The padding bytes should be cryptographically random. They are removed before
-the payload is interpreted and have no meaning to the message layer.
+The padding bytes should be
+[cryptographically random](./cryptography-primer.md#randomness). They are
+removed before the payload is interpreted and have no meaning to the message
+layer.
 
 ## Before and after keys
 
@@ -197,18 +199,23 @@ At a black-box level:
 
 - a **compressor** maps payload bytes to a usually shorter byte sequence;
 - an **encryption algorithm** maps plaintext and secret state to ciphertext;
-- a **MAC** maps a secret key plus packet data to an integrity tag;
+- a [**MAC**](./crypto-hashes.md#message-authentication-codes) maps a secret
+  key plus packet data to an integrity tag;
 - an **authenticated-encryption algorithm** produces ciphertext and a tag
   together, and returns either verified plaintext or failure when opening it.
 
 A protected packet has protocol meaning only after its MAC or authentication tag
 has been verified. Decrypted bytes from a packet with a bad tag are not an SSH
 message.
+[Symmetric encryption and packet protection](./crypto-symmetric.md) explains
+what these primitives guarantee and how the negotiated names map to them.
 
 ### Packet-protection families
 
 The negotiated names determine when packet bytes become trustworthy. Three
-families are common:
+families are common; the
+[cryptography chapter](./crypto-symmetric.md#three-ways-to-combine-encryption-and-integrity)
+compares them in more depth:
 
 | Family | Integrity covers | Receiver consequence |
 | --- | --- | --- |
@@ -219,8 +226,12 @@ families are common:
 Encrypt-then-MAC algorithm names end in `-etm@openssh.com`; their packet
 construction is documented in the
 [OpenSSH protocol extensions](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL).
-AEAD mappings such as AES-GCM define their own length, nonce, and tag handling.
-There is no universal “modern SSH packet” layout beyond the base fields.
+AEAD mappings define their own length, nonce, and tag handling. For example,
+[AES-GCM](./crypto-symmetric.md#aes-gcm) leaves the packet length in
+cleartext but authenticates it, while
+[`chacha20-poly1305@openssh.com`](./crypto-symmetric.md#chacha20-poly1305)
+encrypts the length under a separate key. There is no universal “modern SSH
+packet” layout beyond the base fields.
 
 Alignment is mode-specific too. The base construction aligns
 `4 + packet_length`; OpenSSH's encrypt-then-MAC and AES-GCM constructions
@@ -261,7 +272,8 @@ around these triggers so key and compression transitions cannot conflict.
 Each direction has its own packet sequence number. Under the base protocol it
 starts at zero for the first binary packet, increments after every packet, wraps
 modulo 2³², and is not reset by rekeying. Although the number is not placed on
-the wire as a field, the base MAC calculation covers:
+the wire as a field, the base
+[MAC calculation](./crypto-hashes.md#message-authentication-codes) covers:
 
 ```text
 uint32(sequence_number) || unencrypted_packet
@@ -274,7 +286,9 @@ in
 The negotiated
 [strict-KEX extension](https://datatracker.ietf.org/doc/draft-ietf-sshm-strict-kex/)
 changes this invariant by resetting the appropriate directional sequence number
-immediately after each `NEWKEYS`.
+immediately after each `NEWKEYS`. The
+[Terrapin attack](./crypto-symmetric.md#terrapin-when-implicit-state-is-not-authenticated)
+shows why this implicit counter is security-relevant.
 
 ## Framing over TCP and size limits
 

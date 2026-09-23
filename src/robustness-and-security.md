@@ -38,10 +38,11 @@ the peer or network can still stop sending.
 
 The transition into protection matters too. The exchange hash covers selected
 handshake fields, not every pre-key packet or the implicit packet counters.
-Terrapin exploited that gap: injecting ignored packets before key activation
-could let an attacker remove initial protected packets in affected modes
-without invalidating later tags. Removing extension information could change
-what the client believed the server supported.
+[Terrapin](./crypto-symmetric.md#terrapin-when-implicit-state-is-not-authenticated)
+exploited that gap: injecting ignored packets before key activation could let
+an attacker remove initial protected packets in affected modes without
+invalidating later tags. Removing extension information could change what the
+client believed the server supported.
 
 [Strict KEX](./version-and-negotiation.md#strict-key-exchange) addresses this
 by restricting initial-exchange messages and resetting sequence numbers at
@@ -85,13 +86,15 @@ implementation recommendations.
 ## Forward secrecy and rekeying
 
 Ephemeral key agreement means later theft of the server's long-term host key
-should not reveal old recorded traffic keys. This is forward secrecy. It
-depends on fresh ephemeral secrets being generated and discarded.
+should not reveal old recorded traffic keys. This is
+[forward secrecy](./crypto-key-agreement.md#forward-secrecy). It depends on
+fresh ephemeral secrets being generated and discarded.
 
 Rekeying creates new traffic keys for a live connection. It limits the amount
-of data protected under one key set and respects algorithm-specific usage
-limits. It does not undo exposure that has already occurred and does not change
-the original session identifier.
+of data protected under one key set and respects algorithm-specific
+[usage limits](./crypto-symmetric.md#usage-limits-and-rekeying). It does not
+undo exposure that has already occurred and does not change the original
+session identifier.
 
 ```mermaid
 timeline
@@ -104,11 +107,42 @@ timeline
     More traffic : traffic keys 2 active
 ```
 
-Hybrid post-quantum key exchange addresses a different future threat: an
-adversary recording traffic now and later gaining a cryptographically relevant
-quantum computer. It strengthens secret establishment. A traditional host
-signature remains traditional server authentication, even when the KEX itself
-is hybrid.
+[Hybrid post-quantum key exchange](./crypto-post-quantum.md) addresses a
+different future threat: an adversary recording traffic now and later gaining
+a cryptographically relevant quantum computer. It strengthens secret
+establishment. A traditional host signature remains traditional server
+authentication, even when the KEX itself is hybrid. That
+[asymmetry is deliberate](./crypto-post-quantum.md#why-ssh-changed-key-exchange-first):
+a signature only needs to resist forgery while the handshake is running,
+whereas recorded key-exchange traffic must stay confidential for as long as
+the data matters.
+
+## Cryptographic assumptions
+
+Every protocol argument in this guide eventually rests on a small set of
+assumptions that SSH itself cannot check:
+
+- **Hardness.** Recovering an ephemeral secret from public key-exchange values
+  is infeasible for the selected method; forging a signature without the
+  private key is infeasible; and the hash, MAC, and cipher behave as their
+  designs claim. Quantum computers would break the discrete-logarithm and
+  factoring problems behind classical key agreement and signatures, which is
+  why hybrid methods add a [post-quantum component](./crypto-post-quantum.md#why-quantum-computers-matter).
+- **Randomness.** Cookies, ephemeral private values, padding, and some
+  signature schemes need unpredictable random bytes. A weak random generator
+  can expose keys even when every algorithm is sound; see
+  [Randomness](./cryptography-primer.md#randomness).
+- **Correct implementation.** Libraries must validate peer inputs, avoid
+  leaking secrets through timing, erase ephemeral secrets, and follow the
+  exact wire encodings. Many practical SSH vulnerabilities have come from
+  this layer, or from how primitives were composed, rather than from breaking
+  a primitive itself.
+- **Sound policy.** The endpoints must refuse algorithms whose assumptions no
+  longer hold, and the client must make a real host-key trust decision.
+
+When one of these fails, a connection can still appear to work perfectly:
+the handshake completes, signatures verify, and packets decrypt. A successful
+connection is not evidence that the assumptions hold.
 
 ## What remains visible
 
@@ -121,7 +155,10 @@ are not SSH packets.
 
 Random padding obscures exact content lengths to a degree; it does not make SSH
 a traffic-flow confidentiality system. See
-[RFC 4251 section 9.3.9](https://www.rfc-editor.org/rfc/rfc4251#section-9.3.9).
+[RFC 4251 section 9.3.9](https://www.rfc-editor.org/rfc/rfc4251#section-9.3.9)
+and, for which packet constructions expose lengths and how OpenSSH obscures
+keystroke timing,
+[Length hiding and traffic analysis](./crypto-symmetric.md#length-hiding-and-traffic-analysis).
 
 ## Authentication is only as strong as allowed policy
 
@@ -133,7 +170,8 @@ first accepted method to the next.
 Passwords and keyboard-interactive responses are protected on the network, but
 the authenticated server receives them. Public-key authentication instead
 proves possession by signing connection-bound data; the private key need not
-leave the client or signing agent.
+leave the client, a signing agent, or a
+[hardware authenticator](./crypto-signatures.md#hardware-backed-keys).
 
 ## Channels cross new trust boundaries
 
@@ -166,6 +204,7 @@ For any point in a connection, ask:
 3. Which exact transcript or sequence state is authenticated?
 4. Which decision comes from protocol proof, and which comes from local policy?
 5. Where does the SSH protection end for this channel's data?
+6. Which cryptographic assumption would have to fail for that answer to change?
 
 These questions give a more accurate security description than the single word
 “encrypted.”

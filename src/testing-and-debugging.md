@@ -48,7 +48,7 @@ first; clients may order those two checks differently.
 Suppose a client log says:
 
 ```text
-kex: algorithm: curve25519-sha256
+kex: algorithm: mlkem768x25519-sha256
 kex: host key algorithm: ssh-ed25519
 ```
 
@@ -101,6 +101,21 @@ Do not solve the mismatch by blindly enabling every legacy name. Determine
 whether one side can offer a mutually acceptable current algorithm and why its
 policy excluded that choice.
 
+### Packet authentication failure
+
+After `NEWKEYS`, a packet whose MAC or AEAD tag does not verify ends the
+connection. OpenSSH reports this as a corrupted MAC or an incorrect message
+authentication code. The failure proves only that the received bytes did not
+match what the key and sequence number predict. Common causes are a middlebox
+or faulty network path altering bytes, an implementation bug in one
+negotiated algorithm, or deliberate tampering. The protocol cannot say which,
+and it must not try to use the packet anyway; see
+[Symmetric encryption and packet protection](./crypto-symmetric.md).
+
+Note the negotiated cipher and MAC for each direction. If the failure follows
+one algorithm across different paths, suspect an implementation; if it
+follows one network path, suspect the path.
+
 ### Host-key conflict
 
 A changed-host-key failure is not a user-authentication failure. Record the
@@ -113,7 +128,10 @@ rotation through an independent channel before updating the narrow binding.
 Track each `SSH_MSG_USERAUTH_FAILURE` as a pair: its current method list and
 `partial success` flag. A valid public-key signature can be accepted as one
 factor without completing authentication. Message number 60 must be interpreted
-from the active method state, not from the number alone.
+from the active method state, not from the number alone. With a FIDO security
+key, a missed touch or an unmet presence or PIN policy also appears to the
+client as an ordinary failure; see
+[Limits and failure modes](./fido-security-keys.md#limits-and-failure-modes).
 
 ```mermaid
 sequenceDiagram

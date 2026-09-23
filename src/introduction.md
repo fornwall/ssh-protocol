@@ -75,6 +75,9 @@ By the end of the guide, you should be able to:
 - read SSH's binary types and packet framing at the level needed to follow a
   protocol trace;
 - explain what the client must verify before accepting a server;
+- describe the cryptographic building blocks SSH composes—hashes, MACs,
+  symmetric ciphers, key agreement, key encapsulation, and signatures—by what
+  each one guarantees and what it does not;
 - reason about per-channel flow control and the limits of sharing one transport;
   and
 - diagnose failures by protocol phase instead of guessing from a final error.
@@ -89,11 +92,32 @@ programming language.
 
 You should be comfortable with bytes, hexadecimal notation, network sockets,
 and basic client/server programming. No cryptography background is assumed.
-The cryptography primer treats each primitive as a black box with explicit
-inputs, outputs, and required checks.
 
-> **Security boundary:** The sketches in this guide explain the protocol; they
-> are not recipes for implementing cryptography. Before accepting an unknown
+The cryptography chapters, starting with
+[Cryptography as protocol building blocks](./cryptography-primer.md), follow
+one convention. Each primitive is first presented as a black box: its inputs,
+outputs, failure results, guarantees, and the place it occupies in an SSH
+connection. That view is all the protocol chapters rely on. For readers who
+want more, collapsible sections titled **Go deeper** explain the underlying
+math with high-school algebra, a small worked example, and links for further
+study. They look like this:
+
+<details>
+<summary>Go deeper: what these sections contain</summary>
+
+Modular arithmetic, exponentiation, XOR, and small polynomial examples,
+worked with toy numbers that are far too small to be secure. Skipping every
+Go deeper section loses nothing that a later protocol chapter depends on.
+
+</details>
+
+On a first reading, skip the Go deeper sections. If you prefer to start with
+the protocol, you can also read the cryptography chapters later: protocol
+chapters link to the black-box explanation each step needs. The
+[Glossary](./glossary.md) gives short definitions of recurring terms.
+
+> **Security boundary:** The sketches and toy examples in this guide explain
+> the protocol; they are not recipes for implementing cryptography. Before accepting an unknown
 > or changed host key, establish why it represents the intended server. A
 > connection error is not evidence that a replacement key is trustworthy.
 
@@ -117,5 +141,7 @@ Do not copy their original mandatory algorithm set into a new client.
 [RFC 9142](https://www.rfc-editor.org/rfc/rfc9142) updates key-exchange
 recommendations, while the
 [IANA SSH protocol registries](https://www.iana.org/assignments/ssh-parameters/ssh-parameters.xhtml)
-record assigned names. Later chapters call out extensions and newer algorithms
-where they change the protocol model.
+record assigned names. Current OpenSSH releases, for example, prefer a
+[hybrid post-quantum key exchange](./crypto-post-quantum.md) by default. Later
+chapters call out extensions and newer algorithms where they change the
+protocol model.

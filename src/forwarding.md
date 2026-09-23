@@ -194,8 +194,12 @@ TCP forwarding.
 Agent forwarding has a particularly sharp boundary: the remote host receives
 access to a signing service, not the private-key bytes. A compromised remote
 host may still ask that service to sign while the forwarding channel is open.
-Key constraints and host-bound authentication can narrow this delegated
-capability, but ordinary SSH transport protection does not remove it.
+Key constraints and
+[host-bound authentication](./user-authentication.md#host-bound-public-key-authentication)
+can narrow this delegated capability, and a
+[FIDO security key](./fido-security-keys.md#agents-forwarding-and-jump-hosts)
+makes each signature wait for a touch, but ordinary SSH transport protection
+does not remove it.
 
 ## Check the viewpoint
 

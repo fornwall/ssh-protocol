@@ -5,7 +5,8 @@ connection. Each endpoint sends an ordered proposal in `SSH_MSG_KEXINIT`.
 Both then apply the same deterministic selection rule.
 
 This chapter assumes the binary types and packet framing from
-[SSH binary packets and data types](./binary-packets.md). The next chapter
+[SSH binary packets and data types](./binary-packets.md). The next chapter,
+[Cryptography as protocol building blocks](./cryptography-primer.md),
 introduces the cryptographic operations used by the selected algorithms.
 
 ## `SSH_MSG_KEXINIT` carries proposals
@@ -57,8 +58,12 @@ flowchart TB
     SC --> SCC[Compression]
 ```
 
-The 16-byte cookie makes otherwise identical proposals distinct. It is not an
-algorithm-selection nonce and has no role in the selection rule.
+The 16-byte cookie must be a
+[random value](./cryptography-primer.md#randomness) chosen by the sender.
+Because each complete `KEXINIT` payload later enters the exchange hash, the
+two cookies make every handshake transcript unique. RFC 4253 states the
+purpose: neither side alone can fully determine the keys and the session
+identifier. The cookie has no role in the selection rule.
 
 ## The selection rule: client preference wins
 
@@ -85,7 +90,8 @@ order among the compatible mutual names. A shared KEX name alone is therefore
 not enough to establish compatibility.
 
 For encryption with a separate MAC, both categories need a match. The deployed
-AEAD modes `aes128-gcm@openssh.com`, `aes256-gcm@openssh.com`, and
+[AEAD](./crypto-symmetric.md#three-ways-to-combine-encryption-and-integrity)
+modes `aes128-gcm@openssh.com`, `aes256-gcm@openssh.com`, and
 `chacha20-poly1305@openssh.com` instead supply their own integrity protection:
 selecting one as the cipher skips the separate MAC negotiation in that
 direction. Disjoint MAC lists do not make that AEAD choice fail. This differs
@@ -208,7 +214,8 @@ change the algorithm choices already made by `KEXINIT`.
 ### Strict key exchange
 
 Strict key exchange is a deployed protocol extension designed in response to
-the Terrapin class of prefix-truncation attacks. It is unrelated to OpenSSH's
+the [Terrapin](./crypto-symmetric.md#terrapin-when-implicit-state-is-not-authenticated)
+class of prefix-truncation attacks. It is unrelated to OpenSSH's
 similarly named `StrictHostKeyChecking` user option.
 
 Support is announced with role-specific pseudo-algorithms. Deployed names

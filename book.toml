@@ -17,6 +17,7 @@ default-theme = "navy"
 preferred-dark-theme = "navy"
 smart-punctuation = true
 no-section-label = false
+additional-css = ["custom.css"]
 additional-js = ["mermaid.min.js", "mermaid-init.js"]
 
 [output.html.fold]
