@@ -81,7 +81,7 @@ private scalar: only the public key, the key handle, and some flags. Many
 authenticators store nothing for non-resident credentials; they combine the
 key handle with a secret that never leaves the device to recover the real
 private key while signing. The
-[`ssh-keygen(1)` FIDO section](https://man.openbsd.org/ssh-keygen#FIDO_AUTHENTICATOR)
+[`ssh-keygen(1)` FIDO section](https://man.archlinux.org/man/ssh-keygen.1#FIDO_AUTHENTICATOR)
 describes this two-part split.
 
 Consequences:
@@ -376,8 +376,8 @@ flowchart TD
     UV -->|"yes"| Accept
 ```
 
-The policy knobs, from [`sshd(8)`](https://man.openbsd.org/sshd#AUTHORIZED_KEYS_FILE_FORMAT)
-and [`sshd_config(5)`](https://man.openbsd.org/sshd_config#PubkeyAuthOptions):
+The policy knobs, from [`sshd(8)`](https://man.archlinux.org/man/sshd.8#AUTHORIZED_KEYS_FILE_FORMAT)
+and [`sshd_config(5)`](https://man.archlinux.org/man/sshd_config.5#PubkeyAuthOptions):
 
 | Requirement | Default | Relaxed by | Tightened by |
 | --- | --- | --- | --- |
@@ -496,7 +496,7 @@ Better options, strongest first:
   websites. `ssh-agent -O websafe-allow=` (OpenSSH 10.0) changes the allowed
   applications. By default, forwarded clients also cannot load PKCS#11 or FIDO
   middleware libraries into the agent (see `allow-remote-pkcs11` in
-  [`ssh-agent(1)`](https://man.openbsd.org/ssh-agent)).
+  [`ssh-agent(1)`](https://man.archlinux.org/man/ssh-agent.1)).
 
 ## Limits and failure modes
 
@@ -597,7 +597,7 @@ This writes `~/.ssh/id_ed25519_sk` and `~/.ssh/id_ed25519_sk.pub`, default
 names that `ssh` tries automatically. Use `-t ecdsa-sk` if the device rejects
 Ed25519.
 
-Other [FIDO options](https://man.openbsd.org/ssh-keygen#FIDO_AUTHENTICATOR):
+Other [FIDO options](https://man.archlinux.org/man/ssh-keygen.1#FIDO_AUTHENTICATOR):
 `-O user=name` (several resident keys under one application),
 `-O no-touch-required` (the server must allow it in `authorized_keys`),
 `-O device=path` (choose among attached authenticators), and
@@ -763,13 +763,13 @@ stops working. Reset works only shortly after insertion and needs a touch.
 - [RFC 9987: Secure Shell (SSH) Agent Protocol](https://www.rfc-editor.org/rfc/rfc9987.html).
 - [SSH certificate format Internet-Draft](https://datatracker.ietf.org/doc/draft-miller-ssh-cert/).
 - [RFC 5656: Elliptic Curve Algorithm Integration in SSH](https://www.rfc-editor.org/rfc/rfc5656.html).
-- [`ssh-keygen(1)`](https://man.openbsd.org/ssh-keygen#FIDO_AUTHENTICATOR),
-  [`ssh-add(1)`](https://man.openbsd.org/ssh-add),
-  [`ssh-agent(1)`](https://man.openbsd.org/ssh-agent),
-  [`ssh-sk-helper(8)`](https://man.openbsd.org/ssh-sk-helper),
-  [`ssh_config(5)`](https://man.openbsd.org/ssh_config#SecurityKeyProvider),
-  [`sshd(8)`](https://man.openbsd.org/sshd#AUTHORIZED_KEYS_FILE_FORMAT), and
-  [`sshd_config(5)`](https://man.openbsd.org/sshd_config#PubkeyAuthOptions).
+- [`ssh-keygen(1)`](https://man.archlinux.org/man/ssh-keygen.1#FIDO_AUTHENTICATOR),
+  [`ssh-add(1)`](https://man.archlinux.org/man/ssh-add.1),
+  [`ssh-agent(1)`](https://man.archlinux.org/man/ssh-agent.1),
+  [`ssh-sk-helper(8)`](https://man.archlinux.org/man/ssh-sk-helper.8),
+  [`ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5#SecurityKeyProvider),
+  [`sshd(8)`](https://man.archlinux.org/man/sshd.8#AUTHORIZED_KEYS_FILE_FORMAT), and
+  [`sshd_config(5)`](https://man.archlinux.org/man/sshd_config.5#PubkeyAuthOptions).
 - OpenSSH release notes:
   [8.2](https://www.openssh.com/txt/release-8.2) (FIDO/U2F support, resident
   keys, `ssh-sk-helper`),

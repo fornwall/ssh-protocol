@@ -86,7 +86,7 @@ OpenSSH's server, for example, passes the string to the account's shell with
 `-c`, so `printf '%s\n' "$HOME"` expands the *remote* `HOME`. Local shell
 quoting decides which bytes reach the SSH client in the first place. These are
 two rounds of interpretation, and SSH provides no escaping between them. See
-the [`sshd(8)` login process](https://man.openbsd.org/sshd#LOGIN_PROCESS).
+the [`sshd(8)` login process](https://man.archlinux.org/man/sshd.8#LOGIN_PROCESS).
 
 ## A PTY changes the byte-stream environment
 
@@ -276,4 +276,4 @@ recognizable handshake, as SFTP's version exchange does.
 - [RFC 9987: Secure Shell (SSH) Agent Protocol](https://www.rfc-editor.org/rfc/rfc9987.html)
 - [draft-ietf-secsh-filexfer-02: SSH File Transfer Protocol (version 3)](https://www.openssh.org/txt/draft-ietf-secsh-filexfer-02.txt)
 - [OpenSSH protocol extensions (`PROTOCOL`)](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL)
-- [`sshd(8)`](https://man.openbsd.org/sshd) and [`sshd_config(5)`](https://man.openbsd.org/sshd_config)
+- [`sshd(8)`](https://man.archlinux.org/man/sshd.8) and [`sshd_config(5)`](https://man.archlinux.org/man/sshd_config.5)

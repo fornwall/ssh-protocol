@@ -337,5 +337,5 @@ the server creates. New socket files are owner-only (`StreamLocalBindMask`
 - [OpenSSH agent protocol extensions (`PROTOCOL.agent`)](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.agent)
 - [OpenSSH protocol extensions (`PROTOCOL`)](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL): streamlocal forwarding and host-bound authentication.
 - [OpenSSH: SSH agent restriction](https://www.openssh.org/agent-restrict.html) and the [OpenSSH 8.9 release notes](https://www.openssh.org/txt/release-8.9)
-- [`ssh-add(1)`](https://man.openbsd.org/ssh-add), [`ssh_config(5)`](https://man.openbsd.org/ssh_config), and [`sshd_config(5)`](https://man.openbsd.org/sshd_config)
+- [`ssh-add(1)`](https://man.archlinux.org/man/ssh-add.1), [`ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5), and [`sshd_config(5)`](https://man.archlinux.org/man/sshd_config.5)
 - [X11 SECURITY extension specification](https://xorg.freedesktop.org/archive/X11R7.7/doc/xextproto/security.html)

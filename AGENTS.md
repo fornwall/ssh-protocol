@@ -61,3 +61,6 @@ distributable archive.
 - Cite primary sources (RFCs, Internet-Drafts, NIST FIPS, OpenSSH man pages and
   release notes) and check that external links still resolve. OpenSSH has
   replaced some `PROTOCOL.*` files with Internet-Drafts.
+- Link OpenSSH man pages on `man.archlinux.org` (current portable OpenSSH,
+  with mandoc option anchors), for example
+  `https://man.archlinux.org/man/ssh_config.5#ProxyJump`.

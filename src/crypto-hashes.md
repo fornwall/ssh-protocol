@@ -194,7 +194,7 @@ they use the same hash.
 
 OpenSSH can also draw a fingerprint as "randomart", a small ASCII picture
 (`ssh-keygen -lv`, or `VisualHostKey yes` in
-[`ssh_config`](https://man.openbsd.org/ssh_config#VisualHostKey)). It helps
+[`ssh_config`](https://man.archlinux.org/man/ssh_config.5#VisualHostKey)). It helps
 notice a change at a glance, but does not replace comparing the text when
 trust depends on it.
 
@@ -568,7 +568,7 @@ Learn more:
   (RSA/SHA-1 signatures disabled by default) and
   [OpenSSH 6.8 release notes](https://www.openssh.com/txt/release-6.8)
   (SHA-256 fingerprints).
-- [`ssh-keygen(1)`](https://man.openbsd.org/ssh-keygen) — `-l`, `-E`, and
+- [`ssh-keygen(1)`](https://man.archlinux.org/man/ssh-keygen.1) — `-l`, `-E`, and
   `-v` for fingerprints and randomart.
 - [SHAttered](https://shattered.io/) and
   [SHA-1 is a Shambles](https://sha-mbles.github.io/).

@@ -169,7 +169,7 @@ at about 128-bit security
 ([NIST SP 800-57 Part 1](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final)),
 and `ssh-keygen` has generated 3072-bit RSA keys by default since
 OpenSSH 8.0. OpenSSH's
-[`RequiredRSASize`](https://man.openbsd.org/ssh_config#RequiredRSASize) sets
+[`RequiredRSASize`](https://man.archlinux.org/man/ssh_config.5#RequiredRSASize) sets
 the smallest RSA key the client accepts (default 1024 bits): smaller user
 keys are skipped, and a smaller host key terminates the connection.
 
@@ -535,9 +535,9 @@ the server).
 Certificates expire by design, which limits how long a stolen key stays
 useful. For earlier withdrawal, OpenSSH key revocation lists (KRLs) can
 revoke keys, certificate serial numbers, or key identifiers (see
-[`ssh-keygen(1)`](https://man.openbsd.org/ssh-keygen#KEY_REVOCATION_LISTS)).
+[`ssh-keygen(1)`](https://man.archlinux.org/man/ssh-keygen.1#KEY_REVOCATION_LISTS)).
 Servers load them with
-[`RevokedKeys`](https://man.openbsd.org/sshd_config#RevokedKeys); clients use
+[`RevokedKeys`](https://man.archlinux.org/man/sshd_config.5#RevokedKeys); clients use
 `RevokedHostKeys` or `@revoked` lines in `known_hosts`.
 
 ## Choosing and reading key types as a client
@@ -624,8 +624,8 @@ confidential; post-quantum signatures are still experimental. See
 - [OpenSSH PROTOCOL.u2f: FIDO/U2F security keys](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.u2f).
 - [SSH certificate format Internet-Draft](https://datatracker.ietf.org/doc/draft-miller-ssh-cert/).
 - [RFC 9987: Secure Shell (SSH) Agent Protocol](https://www.rfc-editor.org/rfc/rfc9987.html).
-- [ssh_config(5)](https://man.openbsd.org/ssh_config) (`RequiredRSASize`,
-  `RevokedHostKeys`) and [ssh-keygen(1)](https://man.openbsd.org/ssh-keygen)
+- [ssh_config(5)](https://man.archlinux.org/man/ssh_config.5) (`RequiredRSASize`,
+  `RevokedHostKeys`) and [ssh-keygen(1)](https://man.archlinux.org/man/ssh-keygen.1)
   (key revocation lists).
 - [OpenSSH release notes](https://www.openssh.com/releasenotes.html) (7.0 DSA
   disabled; 8.0 3072-bit RSA default; 8.2 FIDO keys; 8.8 `ssh-rsa` signatures

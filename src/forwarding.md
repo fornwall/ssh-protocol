@@ -104,7 +104,7 @@ fixed target. The server relays each accepted stream in a `forwarded-tcpip`
 channel, and the client interprets SOCKS inside that stream to choose and
 connect to the target. Unlike local `-D`, SOCKS negotiation crosses SSH, but
 the server needs only ordinary remote-forwarding support. See the
-[`ssh(1)` description of `-R`](https://man.openbsd.org/ssh#R).
+[`ssh(1)` description of `-R`](https://man.archlinux.org/man/ssh.1#R).
 
 ## Cancellation and races
 
@@ -169,7 +169,7 @@ login credentials or command plaintext. It can still observe the inner
 handshake and traffic metadata, interrupt delivery, or attempt interference
 that the final host-key check must detect. No agent forwarding and no private
 key on the jump host are needed. See
-[`ProxyJump` in `ssh_config(5)`](https://man.openbsd.org/ssh_config#ProxyJump).
+[`ProxyJump` in `ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5#ProxyJump).
 
 ## Related channels are separate protocols
 

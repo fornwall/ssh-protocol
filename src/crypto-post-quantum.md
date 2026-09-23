@@ -393,7 +393,7 @@ timeline
 
 The OpenSSH 10.1 warning begins
 `** WARNING: connection is not using a post-quantum key exchange algorithm.`
-The [`WarnWeakCrypto`](https://man.openbsd.org/ssh_config#WarnWeakCrypto)
+The [`WarnWeakCrypto`](https://man.archlinux.org/man/ssh_config.5#WarnWeakCrypto)
 option controls it; `WarnWeakCrypto no-pq-kex` silences only this warning,
 ideally inside a `Match host` block for a server that cannot yet be upgraded.
 [OpenSSH: Post-Quantum Cryptography](https://www.openssh.com/pq.html)
@@ -489,7 +489,7 @@ traffic; they matter only once quantum attacks are feasible in real time.
 - [RFC 9958 — Post-Quantum Cryptography for Engineers](https://www.rfc-editor.org/rfc/rfc9958.html).
 - [OpenSSH: Post-Quantum Cryptography](https://www.openssh.com/pq.html) and
   [OpenSSH release notes](https://www.openssh.com/releasenotes.html).
-- [ssh_config(5)](https://man.openbsd.org/ssh_config#WarnWeakCrypto) —
+- [ssh_config(5)](https://man.archlinux.org/man/ssh_config.5#WarnWeakCrypto) —
   `WarnWeakCrypto`.
 - [draft-miller-sshm-mldsa44-ed25519-composite-sigs](https://datatracker.ietf.org/doc/draft-miller-sshm-mldsa44-ed25519-composite-sigs/)
   — the experimental composite signature in OpenSSH 10.4.

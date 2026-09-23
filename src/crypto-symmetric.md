@@ -63,7 +63,7 @@ messages. SSH has used two:
   from RFC 4253. Each plaintext block is XORed with the previous ciphertext
   block before encryption, and the chaining also continues across packets.
   CBC is legacy: current OpenSSH has no CBC cipher in its default
-  [`Ciphers`](https://man.openbsd.org/ssh_config#Ciphers) list.
+  [`Ciphers`](https://man.archlinux.org/man/ssh_config.5#Ciphers) list.
 
 ```mermaid
 flowchart TB
@@ -585,7 +585,7 @@ produces one small packet, and inter-keystroke intervals reveal information
 about what is typed, as Song, Wagner, and Tian showed for SSH in 2001.
 [OpenSSH 9.5](https://www.openssh.com/txt/release-9.5) added client-side
 keystroke timing obfuscation,
-[`ObscureKeystrokeTiming`](https://man.openbsd.org/ssh_config#ObscureKeystrokeTiming),
+[`ObscureKeystrokeTiming`](https://man.archlinux.org/man/ssh_config.5#ObscureKeystrokeTiming),
 on by default with a 20 ms interval: the client sends interactive traffic at
 fixed intervals and keeps sending fake keystroke packets for a while after
 typing stops. As the Terrapin section shows, this defense depends on an
@@ -610,7 +610,7 @@ limits:
   limit per `(key, nonce)`, far beyond any SSH packet, and defers to RFC 4253's
   1 GB recommendation.
 
-OpenSSH's [`RekeyLimit`](https://man.openbsd.org/ssh_config#RekeyLimit) sets a
+OpenSSH's [`RekeyLimit`](https://man.archlinux.org/man/ssh_config.5#RekeyLimit) sets a
 data volume and an optional time interval; by default the volume depends on
 the cipher and there is no time limit. Current source follows RFC 4344: rekey
 after 2³¹ packets in either direction, after 2³² blocks (64 GiB) with AES, and

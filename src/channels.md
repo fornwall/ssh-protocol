@@ -200,7 +200,7 @@ though TCP stalls and rekeying can still delay it.
 
 OpenSSH exposes this policy as `ServerAliveInterval` and
 `ServerAliveCountMax`, separately from `TCPKeepAlive`; see
-[`ssh_config(5)`](https://man.openbsd.org/ssh_config#ServerAliveInterval).
+[`ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5#ServerAliveInterval).
 A timeout shows only that the reply did not arrive in time; it cannot
 distinguish a failed server from a broken network path.
 
@@ -288,4 +288,4 @@ credit untouched, though a shared TCP stall could still delay both.
 - [RFC 4254: The Secure Shell (SSH) Connection Protocol](https://www.rfc-editor.org/rfc/rfc4254.html).
 - [RFC 4251: The Secure Shell (SSH) Protocol Architecture](https://www.rfc-editor.org/rfc/rfc4251.html).
 - [OpenSSH protocol extensions (`PROTOCOL`)](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL).
-- [`ssh_config(5)`](https://man.openbsd.org/ssh_config).
+- [`ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5).

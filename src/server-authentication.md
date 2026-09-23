@@ -85,7 +85,7 @@ OpenSSH's `StrictHostKeyChecking` sets the policy for unknown keys: `ask` (the
 default) prompts, `accept-new` records them silently, and `yes` refuses any
 key not already known. In every mode except `no`, a *changed* key stops the
 connection
-([`ssh_config(5)`](https://man.openbsd.org/ssh_config#StrictHostKeyChecking)).
+([`ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5#StrictHostKeyChecking)).
 
 ### Certification authority
 
@@ -154,7 +154,7 @@ manipulated DNS search path could otherwise send the client to a different
 host whose SSHFP records match.
 
 OpenSSH enables the check with `VerifyHostKeyDNS`
-([`ssh_config(5)`](https://man.openbsd.org/ssh_config#VerifyHostKeyDNS)):
+([`ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5#VerifyHostKeyDNS)):
 
 - `yes`: trust a key matching a DNSSEC-validated ("secure") fingerprint
   without asking; an insecure match is treated as `ask`;
@@ -168,7 +168,7 @@ OpenSSH enables the check with `VerifyHostKeyDNS`
 
 In OpenSSH, `known_hosts` maps connection identities to acceptable host keys
 or CA keys. Each line has the form
-([`sshd(8)`](https://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT)):
+([`sshd(8)`](https://man.archlinux.org/man/sshd.8#SSH_KNOWN_HOSTS_FILE_FORMAT)):
 
 ```text
 [marker] host-patterns key-type base64-key [comment]
@@ -308,7 +308,7 @@ already gone, the client sees an ordinary conflict. An attacker who was
 accepted on first use can use it to plant more keys of its own.
 
 OpenSSH controls the client side with `UpdateHostKeys`
-([`ssh_config(5)`](https://man.openbsd.org/ssh_config#UpdateHostKeys)): `yes`,
+([`ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5#UpdateHostKeys)): `yes`,
 `no`, or `ask`. It is on by default unless the user has changed
 `UserKnownHostsFile` or enabled `VerifyHostKeyDNS`. The client accepts updates
 only when the connection was authenticated with a plain key (not a
@@ -384,5 +384,5 @@ yes`, OpenSSH falls back to asking.
 - [RFC 8709 — Ed25519 and Ed448 Public Key Algorithms for SSH](https://www.rfc-editor.org/rfc/rfc8709.html).
 - [SSH certificate format Internet-Draft](https://datatracker.ietf.org/doc/draft-miller-ssh-cert/).
 - [Host key update mechanism for SSH Internet-Draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-hostkey-update/).
-- [OpenBSD `ssh_config(5)`](https://man.openbsd.org/ssh_config): `StrictHostKeyChecking`, `VerifyHostKeyDNS`, `UpdateHostKeys`, `RevokedHostKeys`, `HostKeyAlias`.
-- [OpenBSD `sshd(8)`: SSH known-hosts file format](https://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT).
+- [OpenBSD `ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5): `StrictHostKeyChecking`, `VerifyHostKeyDNS`, `UpdateHostKeys`, `RevokedHostKeys`, `HostKeyAlias`.
+- [OpenBSD `sshd(8)`: SSH known-hosts file format](https://man.archlinux.org/man/sshd.8#SSH_KNOWN_HOSTS_FILE_FORMAT).

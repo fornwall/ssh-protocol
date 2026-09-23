@@ -260,7 +260,7 @@ algorithm's signature format, over the usual session-bound data.
 
 Only the authorization check changes. Instead of looking up this exact key
 for the account, the server trusts a user CA key, in OpenSSH through
-[`TrustedUserCAKeys`](https://man.openbsd.org/sshd_config#TrustedUserCAKeys)
+[`TrustedUserCAKeys`](https://man.archlinux.org/man/sshd_config.5#TrustedUserCAKeys)
 or a `cert-authority` line in `authorized_keys`. It verifies the CA's
 signature, confirms a currently valid user certificate, maps the requested
 user name to an acceptable principal, and refuses any critical option it does
@@ -569,6 +569,6 @@ authentication.
 - [OpenSSH: SSH agent restriction](https://www.openssh.com/agent-restrict.html).
 - [OpenSSH `PROTOCOL.u2f`](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.u2f):
   security-key formats and signatures.
-- [`sshd_config(5)`](https://man.openbsd.org/sshd_config) (`AuthenticationMethods`,
+- [`sshd_config(5)`](https://man.archlinux.org/man/sshd_config.5) (`AuthenticationMethods`,
   `Banner`, `TrustedUserCAKeys`) and
-  [`ssh_config(5)`](https://man.openbsd.org/ssh_config#PubkeyAuthentication).
+  [`ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5#PubkeyAuthentication).

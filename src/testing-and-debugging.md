@@ -261,10 +261,10 @@ would be unsafe.
   channel windows, EOF, and close
 - [IANA SSH protocol parameters](https://www.iana.org/assignments/ssh-parameters/ssh-parameters.xhtml):
   message numbers and disconnect reasons
-- [`ssh(1)`](https://man.openbsd.org/ssh.1) and
-  [`ssh_config(5)`](https://man.openbsd.org/ssh_config.5): `-v`, `-G`,
+- [`ssh(1)`](https://man.archlinux.org/man/ssh.1) and
+  [`ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5): `-v`, `-G`,
   `StrictHostKeyChecking`, `ServerAliveInterval`
-- [`sshd_config(5)`](https://man.openbsd.org/sshd_config.5): `MaxAuthTries`,
+- [`sshd_config(5)`](https://man.archlinux.org/man/sshd_config.5): `MaxAuthTries`,
   `MaxStartups`, `PerSourcePenalties`
 - [OpenSSH portable source](https://github.com/openssh/openssh-portable),
   `packet.c` and `sshconnect.c`, for the exact message texts

@@ -30,7 +30,7 @@ separate its connection from the final server's; see
 [SSH through a jump host](./forwarding.md#ssh-through-a-jump-host).
 
 The options are documented in
-[`ssh(1)`](https://man.openbsd.org/ssh.1). Debug output can contain hostnames,
+[`ssh(1)`](https://man.archlinux.org/man/ssh.1). Debug output can contain hostnames,
 usernames, paths, key fingerprints, and command text; review it before sharing.
 
 > If the client asks whether to trust a new host key, pause. Compare the shown
@@ -244,9 +244,9 @@ Random padding hides some structure but not all traffic patterns; see
 
 ## References
 
-- [OpenBSD `ssh(1)` manual](https://man.openbsd.org/ssh.1): `-v`, `-G`,
+- [OpenBSD `ssh(1)` manual](https://man.archlinux.org/man/ssh.1): `-v`, `-G`,
   `-Q`, and `-S`.
-- [OpenBSD `ssh_config(5)` manual](https://man.openbsd.org/ssh_config.5):
+- [OpenBSD `ssh_config(5)` manual](https://man.archlinux.org/man/ssh_config.5):
   `ControlMaster`, `KexAlgorithms`, `Ciphers`, and related options.
 - [RFC 4251, section 9.3.9: Traffic analysis](https://www.rfc-editor.org/rfc/rfc4251#section-9.3.9)
 - [RFC 4253: SSH Transport Layer Protocol](https://www.rfc-editor.org/rfc/rfc4253)
