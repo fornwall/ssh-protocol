@@ -30,6 +30,9 @@ The sequence creates three boundaries:
 - later rekeying neither repeats user authentication nor discards open
   channels.
 
+A [message-by-message replay](#follow-the-unit-in-motion) at the end of this
+chapter walks one real connection through these phases.
+
 The diagram shows the successful path; a disconnect or transport failure can
 end any phase. Rekeying belongs to the transport, so it can also interrupt
 authentication, although RFC 8308 says peers should wait until authentication
@@ -139,6 +142,24 @@ its boundary normally means nothing to that application.
 When reading a trace, annotate each item with its unit, direction, layer, and
 current state. That often explains why a length, number, or close event
 behaves as it does.
+
+The step-through below does that for the connection traced in
+[Observe a connection](./first-connection.md#a-compact-annotated-trace): the
+phases from [Layers are also a sequence](#layers-are-also-a-sequence) appear
+as individual messages, each direction switches keys at its own `NEWKEYS`,
+and the client's state changes one message at a time. Channel numbers follow
+this chapter's example: the client calls the session channel 0 and the server
+calls it 5.
+
+<div class="ssh-widget" data-widget="sequence">
+<p class="w-fallback">Interactive figure: a message-by-message replay of one
+OpenSSH connection, from the identification lines through key exchange,
+<code>NEWKEYS</code>, <code>EXT_INFO</code>, public-key user authentication,
+a session channel running one command, and the final disconnect, with the
+client's state after each message. It needs JavaScript; the annotated trace
+in <a href="first-connection.html#a-compact-annotated-trace">Observe a
+connection</a> covers the same exchange.</p>
+</div>
 
 ## Check your understanding
 

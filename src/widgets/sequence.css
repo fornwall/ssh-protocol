@@ -1,0 +1,220 @@
+/* Whole-connection step-through (sequence.js). */
+.w-sequence {
+    container-type: inline-size;
+}
+
+.w-sequence .w-seq-cols {
+    display: grid;
+    grid-template-columns: minmax(15em, 1fr) minmax(15em, 1.2fr);
+    gap: 0.9em;
+    align-items: start;
+}
+
+@container (max-width: 36em) {
+    .w-sequence .w-seq-cols {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .w-sequence .w-seq-ladder-box {
+        max-height: 16em;
+    }
+}
+
+/* Ladder: two lanes with one arrow per message. */
+.w-sequence .w-seq-ladder-box {
+    position: relative;
+    max-height: 26em;
+    overflow-y: auto;
+    border: 1px solid var(--quote-border);
+    border-radius: 4px;
+    background: var(--bg);
+}
+
+.w-sequence .w-seq-lanes {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25em 0.5em;
+    font-weight: bold;
+    font-size: 0.85em;
+    background: var(--bg);
+    border-bottom: 1px solid var(--quote-border);
+}
+
+.w-sequence .w-seq-ladder {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0.3em;
+    border-left: 3px solid var(--quote-border);
+    border-right: 3px solid var(--quote-border);
+}
+
+.w-sequence .w-seq-group {
+    margin: 0.5em 0 0.1em;
+    padding: 0 0.5em;
+    font-size: 0.75em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+    text-align: center;
+}
+
+.w-sequence .w-seq-row {
+    margin: 0;
+    padding: 0.2em 0.6em 0.45em;
+    text-align: center;
+    cursor: pointer;
+    color: var(--fg);
+}
+
+.w-sequence .w-seq-row:hover {
+    background: var(--w-tag-6);
+}
+
+.w-sequence .w-seq-current,
+.w-sequence .w-seq-current:hover {
+    background: var(--w-tag-5);
+}
+
+.w-sequence .w-seq-future {
+    opacity: 0.4;
+}
+
+.w-sequence .w-seq-label {
+    display: block;
+    font-size: 0.78em;
+    overflow-wrap: anywhere;
+}
+
+.w-sequence .w-seq-arrow {
+    position: relative;
+    display: block;
+    height: 0;
+    margin: 0.25em 0.35em 0;
+    border-top: 2px solid var(--w-good);
+}
+
+.w-sequence .w-seq-clear .w-seq-arrow {
+    border-top: 2px dashed var(--fg);
+}
+
+.w-sequence .w-seq-line .w-seq-arrow {
+    border-top-style: dotted;
+}
+
+.w-sequence .w-seq-arrow::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+}
+
+.w-sequence .w-seq-cs .w-seq-arrow::after {
+    right: -3px;
+    border-left: 9px solid var(--w-good);
+}
+
+.w-sequence .w-seq-sc .w-seq-arrow::after {
+    left: -3px;
+    border-right: 9px solid var(--w-good);
+}
+
+.w-sequence .w-seq-clear.w-seq-cs .w-seq-arrow::after {
+    border-left-color: var(--fg);
+}
+
+.w-sequence .w-seq-clear.w-seq-sc .w-seq-arrow::after {
+    border-right-color: var(--fg);
+}
+
+/* Detail panel. */
+.w-sequence .w-seq-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2em 0.6em;
+    overflow-wrap: anywhere;
+}
+
+.w-sequence .w-seq-dir {
+    padding: 0.05em 0.4em;
+    border-radius: 3px;
+    background: var(--w-tag-1);
+    font-size: 0.85em;
+}
+
+.w-sequence .w-seq-num {
+    font-size: 0.85em;
+    opacity: 0.75;
+}
+
+.w-sequence .w-seq-fields {
+    margin: 0.5em 0 0;
+    padding: 0.35em 0.5em;
+    border-radius: 3px;
+    background: var(--bg);
+    font-size: 0.85em;
+    overflow-wrap: anywhere;
+}
+
+.w-sequence .w-seq-detail p {
+    margin: 0.5em 0;
+}
+
+.w-sequence .w-seq-links {
+    font-size: 0.9em;
+}
+
+/* Client state panel. */
+.w-sequence .w-seq-state-box {
+    margin-top: 0.7em;
+    padding: 0.5em 0.6em;
+    border: 1px solid var(--quote-border);
+    border-radius: 4px;
+    background: var(--bg);
+}
+
+.w-sequence .w-seq-state-title {
+    margin-bottom: 0.3em;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.w-sequence .w-seq-state {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.2em 0.7em;
+    align-items: baseline;
+    margin: 0;
+    font-size: 0.88em;
+}
+
+.w-sequence .w-seq-state dt {
+    font-weight: bold;
+}
+
+.w-sequence .w-seq-state dd {
+    margin: 0;
+    padding: 0 0.25em;
+    border-radius: 2px;
+    overflow-wrap: anywhere;
+}
+
+.w-sequence .w-seq-state dd.w-seq-changed {
+    background: var(--w-tag-3);
+}
+
+@container (max-width: 24em) {
+    .w-sequence .w-seq-state {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0 0;
+    }
+
+    .w-sequence .w-seq-state dd {
+        margin-bottom: 0.3em;
+    }
+}
