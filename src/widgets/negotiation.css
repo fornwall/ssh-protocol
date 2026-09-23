@@ -1,0 +1,173 @@
+/* Algorithm negotiation playground (negotiation.js). */
+.w-negotiation .w-controls .w-field {
+    margin: 0;
+}
+
+.w-negotiation .w-controls {
+    align-items: flex-end;
+}
+
+.w-negotiation select {
+    max-width: 100%;
+}
+
+.w-negotiation code {
+    overflow-wrap: anywhere;
+}
+
+.w-negotiation .w-neg-summary {
+    margin: 0.4em 0 0.8em;
+}
+
+.w-negotiation .w-neg-result {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    align-items: baseline;
+    gap: 0.2em 0.8em;
+    margin: 0.4em 0 0.6em;
+}
+
+.w-negotiation .w-neg-result dt {
+    font-weight: bold;
+}
+
+.w-negotiation .w-neg-result dd {
+    margin: 0;
+    min-width: 0;
+}
+
+.w-negotiation .w-neg-report {
+    display: inline-block;
+    margin-top: 0.2em;
+    white-space: normal;
+}
+
+.w-negotiation .w-neg-features {
+    margin: 0.4em 0;
+    padding: 0;
+    list-style: none;
+}
+
+.w-negotiation .w-neg-feature {
+    margin: 0.3em 0;
+    padding: 0.2em 0.6em;
+    border-left: 4px solid var(--quote-border);
+}
+
+.w-negotiation .w-neg-on { border-left-color: var(--w-good); }
+.w-negotiation .w-neg-warn { border-left-color: var(--w-warn); }
+
+.w-negotiation .w-neg-ignored {
+    opacity: 0.55;
+}
+
+.w-negotiation .w-neg-card {
+    margin: 0.8em 0;
+    padding: 0.5em 0.8em;
+    border: 1px solid var(--quote-border);
+    border-radius: 5px;
+    background: var(--bg);
+}
+
+.w-negotiation .w-neg-cardhead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.3em 1em;
+}
+
+.w-negotiation .w-neg-cardhead h4 {
+    margin: 0.2em 0;
+}
+
+.w-negotiation .w-neg-split {
+    font-size: 0.9em;
+    cursor: pointer;
+}
+
+.w-negotiation .w-neg-section + .w-neg-section {
+    margin-top: 0.6em;
+    padding-top: 0.4em;
+    border-top: 1px dashed var(--quote-border);
+}
+
+.w-negotiation .w-neg-dir {
+    font-weight: bold;
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+
+.w-negotiation .w-neg-side {
+    min-width: 0;
+}
+
+.w-negotiation .w-neg-side input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.w-negotiation .w-neg-rowlabel,
+.w-negotiation .w-neg-empty {
+    font-size: 0.8em;
+    opacity: 0.75;
+}
+
+.w-negotiation .w-neg-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25em;
+    margin: 0.2em 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.w-negotiation .w-neg-chip {
+    max-width: 100%;
+    padding: 0.05em 0.4em;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    font-family: var(--mono-font, monospace);
+    font-size: 0.85em;
+    overflow-wrap: anywhere;
+    background: var(--w-tag-6);
+}
+
+.w-negotiation .w-neg-rank {
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+
+.w-negotiation .w-neg-chosen {
+    background: var(--w-tag-2);
+    border-color: var(--w-good);
+    font-weight: bold;
+}
+
+.w-negotiation .w-neg-absent {
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+
+.w-negotiation .w-neg-incompatible {
+    background: var(--w-tag-3);
+    border-color: var(--w-warn);
+}
+
+.w-negotiation .w-neg-marker {
+    background: var(--w-tag-5);
+}
+
+.w-negotiation .w-neg-unreached {
+    background: transparent;
+    border: 1px dashed var(--quote-border);
+    opacity: 0.6;
+}
+
+.w-negotiation .w-status {
+    margin: 0.5em 0 0.2em;
+}
+
+.w-negotiation .w-neg-skip {
+    border-left-color: var(--links);
+}

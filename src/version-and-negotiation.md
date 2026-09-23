@@ -102,12 +102,28 @@ no compatible match, negotiation fails; neither endpoint invents a fallback.
 | Encryption C→S | `aes128-gcm@openssh.com`, `cipher-a` | `cipher-a`, `aes128-gcm@openssh.com` | `aes128-gcm@openssh.com` |
 | Encryption S→C | `cipher-b`, `cipher-a` | `cipher-a`, `cipher-b` | `cipher-b` |
 | MAC C→S | `hmac-sha2-256` | `hmac-sha2-512` | Skipped; GCM supplies the tag |
+| MAC S→C | `hmac-sha2-256` | `hmac-sha2-512`, `hmac-sha2-256` | `hmac-sha2-256`; `cipher-b` needs a MAC |
 | Compression C→S | `none` | `none`, `zlib` | `none` |
 
 The placeholder cipher names show the ordering rule without implying a
 configuration recommendation. For current KEX guidance, see
 [RFC 9142](https://www.rfc-editor.org/rfc/rfc9142.html), which updates RFC
 4253.
+
+The figure below starts from this example. Edit either peer's name-lists,
+give a category separate lists per direction, or pick a preset to see what
+each category selects and why earlier client entries were passed over. It also
+shows which of the [markers](#markers-in-the-kex-algorithm-list) described
+below take effect and whether a guessed first KEX packet would be used.
+
+<div class="ssh-widget" data-widget="negotiation">
+<p class="w-fallback">Interactive figure: editable client and server
+name-lists for KEX, host key, encryption, MAC, and compression. For each
+category it marks the first client entry that the server also lists, explains
+why earlier entries were skipped, and reports failures, AEAD ciphers that make
+the MAC irrelevant, the ext-info and strict-KEX markers, and whether a guessed
+KEX packet would be used.</p>
+</div>
 
 ### No “chosen algorithms” message
 
