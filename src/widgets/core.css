@@ -1,0 +1,162 @@
+/* Shared styles for the guide's interactive figures (src/widgets/).
+   Colors come from mdBook's theme variables, so figures follow the reader's
+   theme. The --w-tag-* tints are translucent and work on light and dark themes;
+   use them to color-code fields consistently across figures. */
+.ssh-widget {
+    --w-tag-1: rgba(66, 135, 245, 0.28);  /* blue: lengths, counters */
+    --w-tag-2: rgba(46, 184, 92, 0.28);   /* green: payload, success */
+    --w-tag-3: rgba(245, 166, 35, 0.32);  /* amber: padding, pending */
+    --w-tag-4: rgba(214, 69, 65, 0.28);   /* red: MAC, failure */
+    --w-tag-5: rgba(155, 89, 182, 0.30);  /* purple: message type, keys */
+    --w-tag-6: rgba(128, 128, 128, 0.28); /* grey: outside the packet */
+    --w-good: #2e9e5b;
+    --w-bad: #d64541;
+    --w-warn: #d68910;
+
+    margin: 1.5em 0;
+    padding: 1em;
+    border: 1px solid var(--quote-border);
+    border-radius: 6px;
+    background: var(--quote-bg);
+    font-size: 0.95em;
+    overflow-x: auto;
+}
+
+.ssh-widget .w-title {
+    margin: 0 0 0.6em;
+    font-weight: bold;
+}
+
+.ssh-widget .w-note,
+.ssh-widget .w-hint {
+    color: var(--fg);
+    opacity: 0.75;
+    font-size: 0.9em;
+}
+
+.ssh-widget .w-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5em;
+    margin: 0.6em 0;
+}
+
+.ssh-widget button,
+.ssh-widget select,
+.ssh-widget input,
+.ssh-widget textarea {
+    font: inherit;
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--quote-border);
+    border-radius: 4px;
+    padding: 0.3em 0.6em;
+}
+
+.ssh-widget textarea,
+.ssh-widget .w-mono {
+    font-family: var(--mono-font, monospace);
+}
+
+.ssh-widget button {
+    cursor: pointer;
+}
+
+.ssh-widget button.w-primary,
+.ssh-widget button[aria-pressed="true"] {
+    border-color: var(--links);
+    box-shadow: inset 0 0 0 1px var(--links);
+}
+
+.ssh-widget button:disabled {
+    cursor: default;
+    opacity: 0.45;
+}
+
+.ssh-widget :focus-visible {
+    outline: 2px solid var(--links);
+    outline-offset: 1px;
+}
+
+.ssh-widget .w-counter {
+    margin-left: auto;
+    opacity: 0.8;
+}
+
+.ssh-widget .w-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+    margin: 0.4em 0;
+    min-width: 0;
+}
+
+.ssh-widget .w-field > label {
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.ssh-widget .w-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14em, 1fr));
+    gap: 0.8em;
+}
+
+.ssh-widget .w-status {
+    margin: 0.6em 0;
+    padding: 0.4em 0.7em;
+    border-left: 4px solid var(--quote-border);
+    border-radius: 3px;
+    background: var(--bg);
+}
+
+.ssh-widget .w-good { border-left-color: var(--w-good); }
+.ssh-widget .w-bad { border-left-color: var(--w-bad); }
+.ssh-widget .w-warn { border-left-color: var(--w-warn); }
+
+.ssh-widget .w-tag-1 { background: var(--w-tag-1); }
+.ssh-widget .w-tag-2 { background: var(--w-tag-2); }
+.ssh-widget .w-tag-3 { background: var(--w-tag-3); }
+.ssh-widget .w-tag-4 { background: var(--w-tag-4); }
+.ssh-widget .w-tag-5 { background: var(--w-tag-5); }
+.ssh-widget .w-tag-6 { background: var(--w-tag-6); }
+
+/* Hex dumps: one cell per byte. */
+.ssh-widget .w-bytes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    font-family: var(--mono-font, monospace);
+}
+
+.ssh-widget .w-byte {
+    min-width: 1.6em;
+    padding: 0.1em 0.15em;
+    text-align: center;
+    border-radius: 2px;
+}
+
+.ssh-widget table {
+    margin: 0.5em 0;
+}
+
+.ssh-widget .w-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* Shown only when JavaScript is off or the figure failed to mount. */
+.w-fallback {
+    font-style: italic;
+}
+
+@media print {
+    .ssh-widget .w-controls {
+        display: none;
+    }
+}

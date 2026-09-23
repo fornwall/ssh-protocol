@@ -15,6 +15,9 @@ This project is an mdBook guide about SSH, published at <https://ssh.fornwall.ne
   - `glossary.md` and `reference-map.md`, which should be updated when terms or
     references are added.
 - `custom.css` styles the collapsible `<details>` sections.
+- `src/widgets/` holds the interactive figures: `core.js`/`core.css` are a
+  small shared runtime loaded on every page by `theme/head.hbs`, and each
+  figure is a `NAME.js` plus `NAME.css` pair that the runtime loads on demand.
 - `mermaid.min.js` and `mermaid-init.js` are vendored by `mdbook-mermaid` for offline diagrams.
 - `justfile` provides the common development tasks; run `just` to list them.
 - `book/` and `dist/` are generated and must not be committed.
@@ -58,6 +61,16 @@ distributable archive.
   `## Check your understanding` (numbered questions and a `<details>` block
   with `<summary>Answers</summary>`), then `## References`. The introduction,
   glossary, and reference map are exempt.
+- Interactive figures supplement the text; they never replace it. The prose
+  and a static example must still make the point with JavaScript off. Embed
+  one with `<div class="ssh-widget" data-widget="NAME">` containing a
+  `<p class="w-fallback">` that describes what the figure shows, and pass
+  options as `data-*` attributes or a `<script type="application/json">`
+  child. Write figures in plain, dependency-free JavaScript on top of
+  `window.SSHWidgets` (DOM, stepper, byte-encoding, BigInt, and SHA-256
+  helpers), style them with mdBook theme variables and the shared `--w-tag-*`
+  tints, scope CSS under `.w-NAME`, avoid document-level `id`s (the print page
+  holds every chapter), and keep them keyboard accessible.
 - Cite primary sources (RFCs, Internet-Drafts, NIST FIPS, OpenSSH man pages and
   release notes) and check that external links still resolve. OpenSSH has
   replaced some `PROTOCOL.*` files with Internet-Drafts.

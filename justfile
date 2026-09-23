@@ -15,7 +15,7 @@ default:
 # Report whether the local authoring tools are installed.
 doctor:
     @status=0; \
-    for tool in mdbook mdbook-mermaid markdownlint-cli2; do \
+    for tool in mdbook mdbook-mermaid markdownlint-cli2 node; do \
       if command -v "$tool" >/dev/null 2>&1; then \
         printf 'ok       %s\n' "$tool"; \
       else \
@@ -45,9 +45,10 @@ view bind=host listen=port:
 watch:
     mdbook watch
 
-# Lint all hand-written Markdown.
+# Lint all hand-written Markdown and check the widget scripts' syntax.
 lint:
     markdownlint-cli2
+    for file in src/widgets/*.js; do node --check "$file"; done
 
 # Apply safe automatic Markdown lint fixes.
 format:
