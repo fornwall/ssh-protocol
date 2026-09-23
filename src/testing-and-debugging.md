@@ -127,8 +127,9 @@ Verify a legitimate rotation through an independent channel before replacing
 the specific entry; see [Server authentication](./server-authentication.md).
 
 The warning also shows that the key was presented and checked against stored
-trust. It does not show whether signature verification happened first; clients
-may order those checks differently.
+trust. OpenSSH does that check before it verifies the signature over `H`, so
+the warning does not show that the peer holds the key's private half; other
+clients may order the checks differently.
 
 ### User authentication rejected
 

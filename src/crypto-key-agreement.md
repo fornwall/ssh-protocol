@@ -83,7 +83,7 @@ sequenceDiagram
     C->>S: SSH_MSG_KEX_ECDH_INIT (30)<br/>string Q_C
     Note over S: Validate Q_C<br/>GENERATE: private q_S, public Q_S<br/>K = AGREE(q_S, Q_C)<br/>compute H, sign H with host key
     S->>C: SSH_MSG_KEX_ECDH_REPLY (31)<br/>string K_S, string Q_S, string signature
-    Note over C: Validate Q_S<br/>K = AGREE(q_C, Q_S)<br/>compute H, verify signature<br/>check K_S is trusted for this host
+    Note over C: Validate Q_S<br/>check K_S is trusted for this host<br/>K = AGREE(q_C, Q_S)<br/>compute H, verify signature
 ```
 
 Classic finite-field Diffie–Hellman

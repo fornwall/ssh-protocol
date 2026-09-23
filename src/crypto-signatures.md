@@ -61,13 +61,17 @@ flowchart TB
         HP["Server host private key"] --> HS["SIGN"]
         H["Exchange hash H"] --> HS
         HS --> HV["Client: VERIFY with K_S"]
-        HV --> HT["Client trust policy:<br/>known_hosts or host CA"]
+        HT["Client trust policy:<br/>known_hosts or host CA"]
+        HV --> HOK["Server authenticated<br/>if both pass"]
+        HT --> HOK
     end
     subgraph Userauth["User authentication: authenticate the user"]
         UP["User private key"] --> US["SIGN"]
         UD["session_id + USERAUTH_REQUEST fields"] --> US
         US --> UV["Server: VERIFY with offered key"]
-        UV --> UT["Server policy:<br/>authorized_keys or user CA"]
+        UT["Server policy:<br/>authorized_keys or user CA"]
+        UV --> UOK["User authenticated<br/>if both pass"]
+        UT --> UOK
     end
 ```
 
@@ -78,7 +82,8 @@ whether the host key is trusted for the destination
 [public-key user authentication](./user-authentication.md#signed-request), the
 user's key signs the session identifier followed by the request fields; the
 server checks the signature and whether the key is authorized for the
-account.
+account. In both places the two checks are independent and both must pass;
+their order does not matter, and OpenSSH does the policy lookup first.
 
 ### Why signatures cannot be moved between connections
 

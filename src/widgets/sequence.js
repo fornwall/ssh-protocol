@@ -59,7 +59,7 @@ SSHWidgets.register('sequence', (root, config) => {
         {
             from: 's', msg: 'SSH_MSG_KEX_HYBRID_REPLY', num: 31,
             detail: 'string K_S (ssh-ed25519 host key), string S_REPLY (1120 bytes), string signature over H',
-            caption: 'The client derives K and H, verifies the host-key signature over H, and checks K_S against known_hosts.',
+            caption: 'The client checks K_S against known_hosts, then derives K and H and verifies the host-key signature over H. Both must pass before it sends NEWKEYS.',
             note: 'The H of this first exchange becomes the session identifier for the life of the connection.',
             links: [['The host-key signature and the trust decision', 'key-exchange.md#the-host-key-signature-and-the-trust-decision'],
                 ['Session identifier versus exchange hash', 'key-exchange.md#session-identifier-versus-exchange-hash']],

@@ -50,7 +50,9 @@ flowchart TD
     D --> E["Server host-key fingerprint"]
     E --> F{"Host trusted?"}
     F -- no --> X["Stop"]
-    F -- yes --> G["New traffic keys active"]
+    F -- yes --> V{"Signature over H valid?<br/>logged only on failure"}
+    V -- no --> X
+    V -- yes --> G["New traffic keys active"]
     G --> H["Authentication methods"]
     H --> I["Authentication succeeded"]
     I --> J["Session channel opened"]
@@ -124,7 +126,7 @@ Read it as evidence, not as a packet list:
 | KEX and host-key names | Both `KEXINIT` proposals had a usable match. |
 | Directional cipher lines | Packet protection was selected separately for each direction. |
 | `KEX_ECDH_REPLY` received | The server's key-exchange reply arrived; it carries the host key and signature. |
-| Host key matches | The presented key matched a local trust entry; this line alone does not prove the exchange signature was verified. |
+| Host key matches | The presented key matched a local trust entry. OpenSSH checks this before the signature over `H`, which it verifies silently; a bad signature ends the connection with `incorrect signature` before `NEWKEYS`. |
 | `resetting ... seqnr` | Strict KEX is active, so each direction's sequence number restarts at `NEWKEYS`. |
 | `rekey out after ... blocks` | The client's usage limit for its new sending keys. |
 | `NEWKEYS` sent and received | Each direction switched to the new keys. |
@@ -227,9 +229,11 @@ Random padding hides some structure but not all traffic patterns; see
    connection. A shared connection would open a new channel on an already
    authenticated transport, so no identification, key exchange, or user
    authentication would appear in the log.
-2. The server's host key matches a `known_hosts` entry for that name. The
-   line does not by itself show that the key-exchange signature was verified;
-   both checks are needed before the server is authenticated.
+2. The server's host key matches a `known_hosts` entry for that name.
+   OpenSSH prints it before it verifies the key-exchange signature, so the
+   line alone does not show that the signature is valid; the following
+   `NEWKEYS sent` does. Both checks are needed before the server is
+   authenticated.
 3. Key-exchange message numbers 30–49 are defined per method. The hybrid
    method reuses the numbers, and so the names, of the ECDH messages.
 4. It is an AEAD cipher that authenticates packets itself, so no separate

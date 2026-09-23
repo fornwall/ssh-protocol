@@ -328,7 +328,7 @@ sequenceDiagram
     C->>S: SSH_MSG_KEX_HYBRID_INIT (30)<br/>string C_INIT = ML-KEM pk (1184) ‖ X25519 public (32)<br/>= 1216 bytes
     Note over S: Check C_INIT is exactly 1216 bytes<br/>Check ML-KEM pk (FIPS 203)<br/>ENCAPS → ct, K_PQ<br/>X25519 → K_CL<br/>K = SHA-256(K_PQ ‖ K_CL)<br/>sign H with host key
     S->>C: SSH_MSG_KEX_HYBRID_REPLY (31)<br/>string K_S<br/>string S_REPLY = ML-KEM ct (1088) ‖ X25519 public (32)<br/>= 1120 bytes<br/>string signature
-    Note over C: Check S_REPLY is exactly 1120 bytes<br/>DECAPS → K_PQ, X25519 → K_CL (reject all-zero)<br/>K = SHA-256(K_PQ ‖ K_CL)<br/>verify signature, check host key trust
+    Note over C: Check host key trust<br/>Check S_REPLY is exactly 1120 bytes<br/>DECAPS → K_PQ, X25519 → K_CL (reject all-zero)<br/>K = SHA-256(K_PQ ‖ K_CL)<br/>compute H, verify signature
 ```
 
 A failed length check, key check, or decapsulation ends the connection with

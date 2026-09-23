@@ -133,12 +133,15 @@ flowchart TB
     HPRIV["Server host private key"] --> SIGN["SIGN"]
     H --> SIGN
     SIGN --> SIG["Signature over H"]
-    SIG --> VER["Client: VERIFY with<br/>host public key"]
+    SIG --> VER{"Client: VERIFY<br/>signature over H"}
     H --> VER
-    VER --> TRUST{"Host key trusted for<br/>this destination?"}
+    HPUB["Host public key K_S<br/>from the KEX reply"] --> VER
+    HPUB --> TRUST{"Host key trusted for<br/>this destination?"}
     TS["known_hosts or trusted CA"] --> TRUST
-    TRUST -->|"yes"| OK["Server authenticated"]
-    TRUST -->|"no"| STOP["Abort before user authentication"]
+    VER -->|"valid"| OK["Server authenticated<br/>only if both pass"]
+    TRUST -->|"yes"| OK
+    VER -->|"invalid"| STOP["Abort before user authentication"]
+    TRUST -->|"no"| STOP
 ```
 
 ### Protect: derive keys and seal packets

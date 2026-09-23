@@ -370,8 +370,8 @@
             let verdict;
             if (state.forge === 'own') {
                 verdict = h('p', { class: 'w-status w-warn' },
-                    'The signature verifies: the attacker signed the client’s own exchange hash H1 with K_M. ',
-                    'Only the trust decision is left. K_M is not the key recorded for this host, so OpenSSH refuses by default ',
+                    'The signature would verify: the attacker signed the client’s own exchange hash H1 with K_M. ',
+                    'Only the trust decision can catch this, and OpenSSH makes it first. K_M is not the key recorded for this host, so OpenSSH refuses by default ',
                     '(“REMOTE HOST IDENTIFICATION HAS CHANGED”); on a first connection the user is shown K_M’s fingerprint and must not accept it.');
             } else if (diff.length) {
                 verdict = h('p', { class: 'w-status w-good' },

@@ -39,8 +39,9 @@ sequenceDiagram
     S->>S: Derive K and H, then sign H
     S->>N: Host public key K_S, Q_S, signature over H
     N->>C: K_S, Q_S, signature over H
+    Note right of C: Check that K_S is trusted for this host
     C->>C: Derive K using q_C and Q_S
-    Note right of C: Rebuild H, validate K_S, verify signature
+    Note right of C: Rebuild H, verify the signature with K_S
 ```
 
 The public values are safe to expose; the ephemeral private values and the
@@ -121,9 +122,15 @@ Separately, the client must decide that `K_S` is acceptable for the intended
 host: a pinned `known_hosts` entry, a host certificate from a trusted CA, a
 DNSSEC-validated SSHFP record, or a fingerprint checked through an
 independent channel. [Server authentication](./server-authentication.md)
-covers these. The two checks may happen in either order, but both are
-required. A valid signature made with an attacker's key is still a valid
+covers these. A valid signature made with an attacker's key is still a valid
 signature; it says nothing about whose key it is.
+
+Both checks must pass before the client sends `NEWKEYS`. RFC 4253 lists the
+trust check first, and OpenSSH makes it as soon as the reply arrives, so a
+new-key prompt appears before the signature has been checked. The order is
+harmless because nothing is sent under the new keys until both checks pass;
+[From host-key proof to server identity](./server-authentication.md#from-host-key-proof-to-server-identity)
+explains the one visible side effect.
 
 ## From `K` and `H` to traffic keys
 
@@ -221,7 +228,7 @@ sequenceDiagram
     C->>S: KEX_HYBRID_INIT: ML-KEM public key || X25519 public key
     Note over S: Encapsulate: ciphertext and K_PQ<br/>X25519: K_CL<br/>K = SHA-256(K_PQ || K_CL)<br/>Compute H and sign it with the Ed25519 host key
     S->>C: KEX_HYBRID_REPLY: K_S, ciphertext || X25519 public key, signature
-    Note over C: Decapsulate: K_PQ. X25519: K_CL<br/>Compute K and H, verify the signature,<br/>check K_S against the trust store
+    Note over C: Check K_S against the trust store<br/>Decapsulate: K_PQ. X25519: K_CL<br/>Compute K and H, verify the signature
     C->>S: NEWKEYS
     S->>C: NEWKEYS
     Note over C,S: Keys derived from K, H, and session_id = H<br/>ChaCha20-Poly1305 now protects each direction

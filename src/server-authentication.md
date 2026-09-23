@@ -39,17 +39,31 @@ sequenceDiagram
     C->>S: Client ephemeral value
     Note over S: Derive K and H using both ephemeral values
     S->>C: Public host key K_S, server ephemeral value, SIGN(host_private, H)
+    C->>T: Is K_S trusted for this destination?
+    T-->>C: match, new key (may ask the user), or conflict
     C->>C: Derive K and recompute H from the reply and transcript
     C->>C: VERIFY(K_S, H, signature)
-    C->>T: Is K_S trusted for this destination?
-    T-->>C: match, new key, or conflict
-    Note over C,S: Continue only if proof and trust policy both succeed
+    C->>S: NEWKEYS, only if trust and signature both succeed
+    Note over C,S: No credentials are sent before this point
 ```
 
 The two checks are independent. A trusted stored key without a valid
 signature proves nothing about the current peer; a valid signature from an
 untrusted key proves control of that key, not the server's identity. Only
 when both succeed should the client start user authentication.
+
+The diagram shows OpenSSH's order, which is also the order that RFC 4253 and
+[RFC 5656, Section 4](https://www.rfc-editor.org/rfc/rfc5656.html#section-4)
+list: the client checks `K_S` against its trust store as soon as the reply
+arrives, before it computes `K` or checks the signature. Security does not
+depend on the order, only on the client sending `NEWKEYS`, and so any
+credential, after both checks pass. One consequence is visible: a new-key
+prompt, and with `accept-new` or a `yes` answer the new `known_hosts` line,
+comes before the peer has proved it holds the private key. If the signature
+then fails, `ssh` stops with `incorrect signature` and the line stays. That
+gives an attacker nothing new, since at first contact it could present a key
+of its own; at worst the unproven line later appears as a
+[changed key](#host-key-changes).
 
 ## Fingerprints and key formats
 
@@ -377,16 +391,18 @@ change before the entry is updated. Try each `StrictHostKeyChecking` mode.
 ## Check your understanding
 
 1. The signature over `H` verifies. Why is that not enough to continue?
-2. A `known_hosts` line reads `@cert-authority *.example.com ssh-ed25519 …`.
+2. OpenSSH asks you to accept a new host key before it has checked the
+   signature over `H`. Can a peer that lacks the private key exploit that?
+3. A `known_hosts` line reads `@cert-authority *.example.com ssh-ed25519 …`.
    The server `db1.example.com` presents a certificate from that CA whose only
    principal is `web1.example.com`. Is it accepted?
-3. Why must an SSHFP match be DNSSEC-validated before it can replace a user's
+4. Why must an SSHFP match be DNSSEC-validated before it can replace a user's
    confirmation?
-4. Why does a client ask for `hostkeys-prove` signatures instead of recording
+5. Why does a client ask for `hostkeys-prove` signatures instead of recording
    the keys in the `hostkeys` advertisement?
-5. A server's key changed without any prior rotation announcement. Does
+6. A server's key changed without any prior rotation announcement. Does
    `UpdateHostKeys` help?
-6. The host key conflicts with the stored entry. What should the client do
+7. The host key conflicts with the stored entry. What should the client do
    before sending a password?
 
 <details>
@@ -395,19 +411,23 @@ change before the entry is updated. Try each `StrictHostKeyChecking` mode.
 1. It proves only that the peer holds the private key for `K_S`. The client
    must still check that `K_S` is trusted for the intended destination; an
    attacker can sign with its own key.
-2. No. The CA pattern matches, but no principal matches `db1.example.com`.
+2. No. If the signature fails, `ssh` stops before `NEWKEYS`, so no
+   credentials or session data reach the peer. At most a key the user
+   accepted stays in `known_hosts` unproven, and an attacker at first contact
+   could instead present a key it does hold.
+3. No. The CA pattern matches, but no principal matches `db1.example.com`.
    (OpenSSH then retries with the certified key as a plain key, which needs
    its own `known_hosts` entry.)
-3. Without DNSSEC, an attacker who can spoof DNS answers can publish a
+4. Without DNSSEC, an attacker who can spoof DNS answers can publish a
    fingerprint for its own key. RFC 4255 forbids trusting unauthenticated
    SSHFP records.
-4. Anyone can advertise a public key. The signature over the session
+5. Anyone can advertise a public key. The signature over the session
    identifier proves the server holds the private key now, which stops a
    malicious server from planting another server's key under its own name.
-5. No. The mechanism only works over a connection authenticated with an
+6. No. The mechanism only works over a connection authenticated with an
    already trusted key; after an unannounced change the client sees an
    ordinary conflict.
-6. Stop before user authentication, confirm the destination and route, and
+7. Stop before user authentication, confirm the destination and route, and
    verify the new fingerprint through an independent channel before updating
    the specific trust entry.
 
@@ -419,6 +439,7 @@ change before the entry is updated. Try each `StrictHostKeyChecking` mode.
 - [RFC 4253 — SSH Transport Layer Protocol](https://www.rfc-editor.org/rfc/rfc4253.html), Sections 7 and 8.
 - [RFC 4255 — Using DNS to Securely Publish SSH Key Fingerprints](https://www.rfc-editor.org/rfc/rfc4255.html).
 - [RFC 4716 — SSH Public Key File Format](https://www.rfc-editor.org/rfc/rfc4716.html).
+- [RFC 5656 — Elliptic Curve Algorithms for SSH](https://www.rfc-editor.org/rfc/rfc5656.html), Section 4.
 - [RFC 6594 — Use of the SHA-256 Algorithm with RSA, DSA, and ECDSA in SSHFP Resource Records](https://www.rfc-editor.org/rfc/rfc6594.html).
 - [RFC 7479 — Using Ed25519 in SSHFP Resource Records](https://www.rfc-editor.org/rfc/rfc7479.html).
 - [RFC 8332 — Use of RSA Keys with SHA-256 and SHA-512 in SSH](https://www.rfc-editor.org/rfc/rfc8332.html).
