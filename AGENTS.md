@@ -5,9 +5,12 @@ This project is an mdBook guide about SSH, published at <https://ssh.fornwall.ne
 - `book.toml` configures mdBook, the Mermaid preprocessor, and extra assets.
 - `src/SUMMARY.md` defines the chapter order and navigation.
 - `src/*.md` contains the guide material:
-  - protocol chapters (transport, user authentication, connection protocol);
-  - `cryptography-primer.md` plus nested `crypto-*.md` chapters (hashes/MACs/KDF,
-    symmetric ciphers, key agreement, signatures, post-quantum);
+  - protocol chapters (transport, key exchange and server authentication, user
+    authentication, connection protocol including `other-channels.md` for
+    agent, X11, and Unix-socket forwarding);
+  - a separate "Cryptographic building blocks" part: `cryptography-primer.md`
+    plus nested `crypto-*.md` chapters (hashes/MACs/KDF, symmetric ciphers, key
+    agreement, signatures, post-quantum);
   - `fido-security-keys.md`, which also covers OpenSSH and `ykman` setup;
   - `glossary.md` and `reference-map.md`, which should be updated when terms or
     references are added.
@@ -51,8 +54,10 @@ distributable archive.
 - Do not put Mermaid diagrams inside `<details>`; they render at the wrong
   size while collapsed. Quote labels that contain punctuation, and give colored
   nodes an explicit `color:#000`.
-- End chapters with `## Check your understanding` (with a `<details>` Answers
-  block) or a review list, followed by `## References`.
+- End chapters with optional `## Lab: …` sections, then
+  `## Check your understanding` (numbered questions and a `<details>` block
+  with `<summary>Answers</summary>`), then `## References`. The introduction,
+  glossary, and reference map are exempt.
 - Cite primary sources (RFCs, Internet-Drafts, NIST FIPS, OpenSSH man pages and
   release notes) and check that external links still resolve. OpenSSH has
   replaced some `PROTOCOL.*` files with Internet-Drafts.

@@ -1,28 +1,24 @@
 # Channels and flow control
 
 After user authentication, the `ssh-connection` service multiplexes many
-logical byte streams over one transport. Each stream is a
-**channel** with its own identifiers, flow-control windows, requests, and
-close state.
-
-[RFC 4254](https://www.rfc-editor.org/rfc/rfc4254.html) specifies this layer.
-The next two chapters apply its common rules to sessions and TCP forwarding.
+logical byte streams over one transport. Each stream is a **channel** with its
+own identifiers, flow-control windows, requests, and close state.
+[RFC 4254](https://www.rfc-editor.org/rfc/rfc4254.html) specifies this layer;
+the following chapters apply it to sessions and forwarding.
 
 ## One transport, many channels
-
-SSH multiplexes independent activities into the transport packet stream.
 
 Closing one channel does not close the others or end the SSH transport.
 
 The channels still share one ordered TCP stream. If a TCP segment is lost,
-later bytes for every channel wait for retransmission. This is TCP
-*head-of-line blocking*. Channel windows isolate receive credit, but they do
-not guarantee independent latency, bandwidth, or scheduling. Rekeying and a
-transport failure also affect all channels.
+later bytes for every channel wait for its retransmission (TCP
+*head-of-line blocking*). Channel windows isolate receive credit, not latency,
+bandwidth, or scheduling. Rekeying and transport failure affect all channels.
 
 ## Channel numbers are local
 
-Each peer chooses its own number for the same logical channel. Suppose the client calls a new channel `7` and the server calls it `42`:
+Each peer chooses its own number for the same logical channel. Suppose the
+client calls a new channel `7` and the server calls it `42`:
 
 ```mermaid
 sequenceDiagram
@@ -34,13 +30,15 @@ sequenceDiagram
     S-->>C: CHANNEL_DATA(recipient=7, data)
 ```
 
-The `sender channel` field introduces the number chosen by the sender. Subsequent messages carry the *recipient's* local number. The same logical channel therefore has a pair of identifiers, not one universal channel ID:
+The `sender channel` field introduces the sender's own number. Every later
+message carries the *recipient's* number. A channel therefore has a pair of
+identifiers, not one universal ID:
 
 ```text
 local channel 7 <-> remote channel 42
 ```
 
-The words *sender* and *recipient* are relative to the message carrying the field. Each channel's identifier pair keeps its data, windows, and lifecycle separate from every other channel.
+*Sender* and *recipient* are relative to the message that carries the field.
 
 ## Opening a channel
 
@@ -55,10 +53,15 @@ uint32    maximum packet size
 ...       channel-type-specific fields
 ```
 
-The recipient returns `SSH_MSG_CHANNEL_OPEN_CONFIRMATION`, which introduces its own channel number and receive limits, or `SSH_MSG_CHANNEL_OPEN_FAILURE`, which contains a reason code and description. Standard failure reasons distinguish administrative prohibition, connection failure, unknown type, and resource shortage. See [RFC 4254, Section 5.1](https://www.rfc-editor.org/rfc/rfc4254.html#section-5.1).
+The recipient answers with `SSH_MSG_CHANNEL_OPEN_CONFIRMATION`, which
+introduces its own channel number and receive limits, or with
+`SSH_MSG_CHANNEL_OPEN_FAILURE`, which carries a reason code and description.
+The standard reasons are administrative prohibition, connection failure,
+unknown channel type, and resource shortage
+([RFC 4254, Section 5.1](https://www.rfc-editor.org/rfc/rfc4254.html#section-5.1)).
 
-The opener waits for confirmation before sending channel data. At that point
-it knows the recipient's channel ID and the credit available in that direction.
+The opener sends no channel data until the confirmation arrives; only then does
+it know the peer's channel number and the credit available in that direction.
 
 ```mermaid
 stateDiagram-v2
@@ -78,28 +81,35 @@ stateDiagram-v2
     Closed --> [*]
 ```
 
-A channel number does not become reusable merely because one side has sent CLOSE. Under RFC 4254, the channel is closed for a peer only once that peer has both sent and received `SSH_MSG_CHANNEL_CLOSE`.
+A channel number becomes reusable for a peer only once that peer has both sent
+and received `SSH_MSG_CHANNEL_CLOSE`.
 
 ## Windows and flow control
 
-TCP already has flow control, but one TCP receive buffer is shared by all multiplexed SSH traffic. SSH adds a receive window to each channel and each direction, so a slow consumer can stop its own stream without requiring every channel to stop.
+TCP has its own flow control, but one TCP receive buffer is shared by all
+multiplexed traffic. SSH therefore gives each channel a receive window in each
+direction, so a slow consumer can stop its own stream without stopping the
+others.
 
-The window advertised in `CHANNEL_OPEN` or `OPEN_CONFIRMATION` is a promise: “you may send me this many bytes of channel data.” It describes the sender's receive capacity, not its send capacity.
-
-For each direction, sending follows this arithmetic:
+The window advertised in `CHANNEL_OPEN` or `OPEN_CONFIRMATION` is a promise:
+“you may send me this many bytes of channel data.” It describes the
+advertiser's receive capacity, not its send capacity. For each direction, the
+sender follows this arithmetic:
 
 ```text
 allowed_channel_data = min(remote_window, remote_max_packet)
 remote_window  -= bytes_sent
 ```
 
-When the receiver has made capacity available, it sends:
+When the receiver has room again, it sends:
 
 ```text
 SSH_MSG_CHANNEL_WINDOW_ADJUST(recipient_channel, bytes_to_add)
 ```
 
-The sender adds that credit without allowing the 32-bit window to overflow. Data must stop when the remote window reaches zero, but control messages such as window adjustments, EOF, CLOSE, and channel requests do not consume window space.
+The sender adds that credit, never letting the 32-bit window overflow. Data
+stops when the remote window reaches zero; control messages such as window
+adjustments, EOF, CLOSE, and channel requests consume no window.
 
 ```mermaid
 sequenceDiagram
@@ -115,18 +125,23 @@ sequenceDiagram
     Note over A: remote_window = 8<br/>resume
 ```
 
-Both `SSH_MSG_CHANNEL_DATA` and `SSH_MSG_CHANNEL_EXTENDED_DATA` consume the same channel window. For session channels, extended-data type 1 is stderr. The maximum channel packet size is independent from the transport packet ceiling, and both limits apply. [RFC 4254, Section 5.2](https://www.rfc-editor.org/rfc/rfc4254.html#section-5.2) defines these rules.
+The receiver decides when and by how much to replenish, which ties permission
+to send to its capacity to consume. A zero-window sender must pause that
+channel even while the TCP connection remains writable.
 
-Window accounting counts bytes in the `data` string, excluding its length
-prefix and the surrounding SSH fields, padding, and protection. Compression
-does not buy extra channel credit: 1,000 bytes of channel data consume 1,000
-bytes of window even if the protected packet on the wire is much smaller.
+`SSH_MSG_CHANNEL_DATA` and `SSH_MSG_CHANNEL_EXTENDED_DATA` consume the same
+window; for session channels, extended-data type 1 is stderr. The maximum
+channel packet size is separate from the transport packet ceiling, and both
+apply ([RFC 4254, Section 5.2](https://www.rfc-editor.org/rfc/rfc4254.html#section-5.2)).
 
-Sharing credit also links stdout and stderr. If a client consumes stdout but
-leaves stderr buffered, stderr can eventually occupy the entire receive
-window and stop further output on that session channel.
+Window accounting counts the bytes of the `data` string only: not its length
+prefix, the surrounding fields, padding, or protection. Compression buys no
+extra credit: 1,000 bytes of channel data consume 1,000 bytes of window however
+small the packet on the wire.
 
-The receiver decides when and by how much to replenish the window. This ties permission to send to the receiver's capacity to consume data. Until `WINDOW_ADJUST` adds credit, a zero-window sender must pause that channel even if the underlying TCP connection remains writable.
+Shared credit also links stdout and stderr. A client that reads stdout but
+leaves stderr buffered can let stderr fill the whole receive window and stall
+all further output on that session.
 
 ## Requests are not data
 
@@ -137,7 +152,11 @@ SSH has two request scopes:
 | Whole connection | `SSH_MSG_GLOBAL_REQUEST` | Ask the server to listen for remote forwarding | `SSH_MSG_REQUEST_SUCCESS` or `FAILURE` |
 | One channel | `SSH_MSG_CHANNEL_REQUEST` | Allocate a PTY or start a command | `SSH_MSG_CHANNEL_SUCCESS` or `FAILURE` |
 
-Both include a `want reply` boolean. When it is false, no success or failure reply is sent. When it is true, the generic reply contains no request identifier, so its meaning comes from ordering. Global replies preserve global request order; channel-request replies preserve order within that channel, while replies for different channels may be interleaved. See [RFC 4254, Sections 4 and 5.4](https://www.rfc-editor.org/rfc/rfc4254.html#section-4).
+Both carry a `want reply` boolean. When it is false, no reply is sent. When it
+is true, the reply carries no request identifier, so ordering gives it meaning:
+global replies follow global request order, and channel-request replies follow
+request order within that channel, though replies on different channels may
+interleave ([RFC 4254, Sections 4 and 5.4](https://www.rfc-editor.org/rfc/rfc4254.html#section-4)).
 
 ```mermaid
 sequenceDiagram
@@ -150,46 +169,49 @@ sequenceDiagram
     S-->>C: CHANNEL_SUCCESS(ch=7)
 ```
 
-For setup operations whose success affects correctness, request and check a reply. A client that sends `exec` with no reply and immediately treats bytes as command output cannot distinguish refusal from delayed output or later channel closure.
+Request a reply whenever success matters. A client that sends `exec` without
+one and treats incoming bytes as command output cannot tell refusal from
+delayed output or a later close.
 
 ## Keepalives and evidence of liveness
 
-An idle connection can be healthy: SSH does not require continuous channel
-traffic. To detect an unresponsive peer, a client can send a protected request
-that requires a reply. OpenSSH's server-alive mechanism sends the global
-request `keepalive@openssh.com` with `want_reply = true`; see its
+An idle connection can be healthy: SSH needs no continuous traffic. To detect
+an unresponsive peer, a client sends a protected request that requires a
+reply. OpenSSH's server-alive mechanism sends the global request
+`keepalive@openssh.com` with `want_reply = true`; see its
 [client implementation](https://github.com/openssh/openssh-portable/blob/master/clientloop.c).
 
-A peer that does not recognize a global request returns
-`SSH_MSG_REQUEST_FAILURE` when a reply was requested. That failure still
-demonstrates that the peer processed the request and sent a protected reply.
-It is useful evidence of liveness even though the requested operation did not
-succeed. As with every global reply, its position in the reply order identifies
-which request it answers.
+A peer that does not recognize the request answers
+`SSH_MSG_REQUEST_FAILURE`. That failure is still a protected reply, so it
+proves the peer processed the request even though the operation failed. Its
+position in the reply order identifies which request it answers.
 
 | Observation | What it establishes |
 | --- | --- |
 | A local write succeeds | The local system accepted bytes for sending. |
-| A TCP acknowledgement arrives | TCP reports receipt of stream bytes; it provides no SSH authentication or evidence of application processing. |
-| A protected SSH request receives its corresponding reply | The SSH peer processed that request. |
-| A command produces output or an exit report | That particular channel has application progress or a reported result. |
+| A TCP acknowledgement arrives | TCP received stream bytes; no SSH authentication or application processing is implied. |
+| A protected SSH request receives its reply | The SSH peer processed that request. |
+| A command produces output or an exit report | That channel has application progress or a result. |
 
-`SSH_MSG_IGNORE` requests no reply, so sending it alone cannot establish that
-the peer is responsive. A global keepalive also does not prove that a shell,
-forwarded target, or other channel is making progress. It consumes no channel
-window, though TCP stalls and rekeying can still delay it.
+`SSH_MSG_IGNORE` requests no reply, so it cannot show that the peer is
+responsive. A global keepalive does not show that a shell, forwarded target,
+or other channel is making progress either. It consumes no channel window,
+though TCP stalls and rekeying can still delay it.
 
-OpenSSH exposes its policy through `ServerAliveInterval` and
+OpenSSH exposes this policy as `ServerAliveInterval` and
 `ServerAliveCountMax`, separately from `TCPKeepAlive`; see
 [`ssh_config(5)`](https://man.openbsd.org/ssh_config#ServerAliveInterval).
-A timeout establishes that the expected response did not arrive in time. It
-cannot distinguish a failed server from a delayed or broken network path.
+A timeout shows only that the reply did not arrive in time; it cannot
+distinguish a failed server from a broken network path.
 
 ## EOF and CLOSE
 
-`SSH_MSG_CHANNEL_EOF` means “I will send no more data in this direction.” It is a half-close. No protocol reply is required, and the other direction remains usable.
+`SSH_MSG_CHANNEL_EOF` means “I will send no more data in this direction.” It is
+a half-close: no reply is required, and the other direction stays usable.
 
-`SSH_MSG_CHANNEL_CLOSE` means “terminate this channel.” A recipient must send CLOSE back unless it already did. EOF is conventional before a graceful close but is not required.
+`SSH_MSG_CHANNEL_CLOSE` means “terminate this channel.” The recipient must send
+CLOSE back unless it already has. EOF usually precedes a graceful close but is
+not required.
 
 ```mermaid
 sequenceDiagram
@@ -206,25 +228,20 @@ sequenceDiagram
     Note over C,S: Both sent and received CLOSE<br/>IDs may be reused
 ```
 
-Local stdin reaching EOF ends only the client-to-server data direction; the remote command may still send final output and an exit status. EOF and CLOSE can be sent even when the data window is zero, so exhausted data credit does not make shutdown impossible. See [RFC 4254, Section 5.3](https://www.rfc-editor.org/rfc/rfc4254.html#section-5.3).
+When local stdin reaches EOF, only the client-to-server direction ends; the
+remote command can still send final output and an exit status. EOF and CLOSE
+may be sent with a zero window, so exhausted credit never blocks shutdown
+([RFC 4254, Section 5.3](https://www.rfc-editor.org/rfc/rfc4254.html#section-5.3)).
 
-## Protocol review
-
-The connection protocol has these invariants:
-
-- one logical channel has an independently chosen local ID at each endpoint;
-- each direction has independently advertised windows and maximum packet sizes;
-- ordinary and extended data consume the same receive credit;
-- a zero window prohibits that direction's channel data, while control
-  traffic and other channels remain eligible to send;
-- request replies derive their meaning from scope and ordering;
-- EOF half-closes one direction without discarding the other; and
-- channel IDs are reused only after CLOSE has been both sent and received.
+EOF has no reverse form: the core protocol cannot say “stop sending to me”
+while keeping the channel open. OpenSSH adds the channel request
+`eow@openssh.com` (end of write) between OpenSSH peers for that purpose; see
+the [OpenSSH protocol extensions](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL).
 
 ## Lab: simulate two channels
 
-Open two channels on paper. Give the client and server different local IDs for
-each. Then trace this sequence:
+Open two channels on paper, giving the client and server different local IDs
+for each. Trace this sequence:
 
 1. The first channel exhausts its server-advertised window.
 2. The second channel continues to deliver data.
@@ -233,10 +250,42 @@ each. Then trace this sequence:
 5. Both channels complete independent CLOSE handshakes.
 
 At each step, record the recipient channel number and both directional window
-values. Exhausting the first channel's credit does not reduce the second
-channel's credit. A shared TCP stall could still delay both.
+values. Exhausting the first channel's credit leaves the second channel's
+credit untouched, though a shared TCP stall could still delay both.
+
+## Check your understanding
+
+1. A client numbers a channel `3`; the server numbers it `9`. Which number does
+   the client put in `CHANNEL_DATA` it sends?
+2. A session channel's remote window is zero. Which messages can the client
+   still send on it?
+3. Why can buffering stderr without reading it stall stdout?
+4. How does a client know which `CHANNEL_SUCCESS` answers which request?
+5. A keepalive gets `REQUEST_FAILURE`. Is the peer alive?
+6. After sending CLOSE, may the client reuse the channel number at once?
+
+<details>
+<summary>Answers</summary>
+
+1. `9`, the recipient's number. The client's own number, `3`, appeared only as
+   `sender channel` in its open message.
+2. Control messages: channel requests, `WINDOW_ADJUST` for the other
+   direction, EOF, and CLOSE. Only `CHANNEL_DATA` and `CHANNEL_EXTENDED_DATA`
+   consume window.
+3. Stdout and stderr consume one shared receive window. Unread stderr keeps the
+   client from replenishing it, so the server eventually cannot send either.
+4. By order. Replies on one channel follow that channel's request order;
+   replies carry no request identifier.
+5. Yes. The failure is a protected reply, so the peer processed the request,
+   although that says nothing about progress on any channel.
+6. No. It must also receive the peer's CLOSE; only then is the channel closed
+   for the client.
+
+</details>
 
 ## References
 
 - [RFC 4254: The Secure Shell (SSH) Connection Protocol](https://www.rfc-editor.org/rfc/rfc4254.html).
 - [RFC 4251: The Secure Shell (SSH) Protocol Architecture](https://www.rfc-editor.org/rfc/rfc4251.html).
+- [OpenSSH protocol extensions (`PROTOCOL`)](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL).
+- [`ssh_config(5)`](https://man.openbsd.org/ssh_config).

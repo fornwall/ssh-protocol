@@ -56,6 +56,8 @@ setup; subsequent publishes update the site without changing DNS.
 - [RFC 4253 — SSH Transport Layer Protocol](https://www.rfc-editor.org/rfc/rfc4253)
 - [RFC 4254 — SSH Connection Protocol](https://www.rfc-editor.org/rfc/rfc4254)
 - [RFC 4256 — Generic Message Exchange Authentication](https://www.rfc-editor.org/rfc/rfc4256)
+- [RFC 4335 — Session Channel Break Extension](https://www.rfc-editor.org/rfc/rfc4335)
+- [RFC 4462 — GSS-API Authentication and Key Exchange](https://www.rfc-editor.org/rfc/rfc4462)
 - [RFC 4716 — SSH Public Key File Format](https://www.rfc-editor.org/rfc/rfc4716)
 - [RFC 5656 — Elliptic Curve Algorithms for SSH](https://www.rfc-editor.org/rfc/rfc5656)
 - [RFC 8308 — Extension Negotiation in SSH](https://www.rfc-editor.org/rfc/rfc8308)
@@ -84,8 +86,9 @@ For a general overview and history, see [Secure Shell on Wikipedia](https://en.w
 ## Status
 
 The guide covers identification, packet framing, negotiation, key exchange,
-host and user authentication (including FIDO security keys), sessions,
-forwarding, security analysis, and trace-based diagnosis.
+host and user authentication (including FIDO security keys), sessions, TCP,
+agent, X11, and Unix-socket forwarding, security analysis, and trace-based
+diagnosis.
 
 A cryptography part explains the primitives SSH relies on: hashes, MACs, and
 key derivation; symmetric packet protection; Diffie–Hellman and elliptic-curve

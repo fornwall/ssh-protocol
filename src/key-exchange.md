@@ -1,23 +1,16 @@
 # Key exchange: from public values to protected traffic
 
-Algorithm negotiation chooses a key-exchange method. Running that method must
-then accomplish three different jobs:
+Once negotiation has chosen a method, key exchange must do three things:
+establish fresh shared secrets over an observable network, authenticate the
+server and the handshake transcript, and derive independent keys for each
+direction. It does **not** authenticate the login user; that is the job of the
+[user-authentication protocol](./user-authentication.md) running over the
+protected transport.
 
-- establish fresh secret material over an observable network;
-- authenticate the server and the handshake transcript; and
-- derive independent keys for protecting packets in both directions.
-
-It does **not** authenticate the login user. User authentication is a later
-SSH protocol layered over this protected transport.
-
-This chapter treats cryptographic primitives as black boxes: what goes in,
-what comes out, and what security role the output plays. Each box links to
-the cryptography chapter that opens it, and the linked standards contain the
-exact encodings.
+The cryptographic primitives appear here as black boxes, each linked to the
+chapter that opens it.
 
 ## Three mechanisms, three questions
-
-Key exchange has three separate jobs.
 
 | Mechanism | Question it answers |
 | --- | --- |
@@ -25,14 +18,14 @@ Key exchange has three separate jobs.
 | Host-key [signature](./crypto-signatures.md) | Did the holder of this host key approve this exact handshake? |
 | Host-key [trust policy](./server-authentication.md#trust-models) | Is this key authorized to represent the host the user intended to reach? |
 
-Passing the first two checks is not enough if the client accepts any host key.
-An active attacker can run its own key exchange and sign its own transcript
-with its own key. The client's known-hosts or certificate policy supplies the
-missing identity binding.
+The first two are not enough if the client accepts any host key: an active
+attacker can run its own key exchange and sign its own transcript with its
+own key. The client's known-hosts or certificate policy supplies the missing
+binding to an identity.
 
 ## The basic signed key-exchange flow
 
-Many SSH KEX methods fit the same two-message shape after `KEXINIT`:
+Many SSH KEX methods share the same two-message shape after `KEXINIT`:
 
 ```mermaid
 sequenceDiagram
@@ -50,132 +43,113 @@ sequenceDiagram
     Note right of C: Rebuild H, validate K_S, verify signature
 ```
 
-The public values are safe to expose. The ephemeral private values and the
-resulting shared secret are not transmitted. “Ephemeral” means freshly
-generated for this exchange and discarded afterwards. Compromise of the
-server's long-term host private key at a later date should therefore not reveal
-old traffic secrets; this property is called
+The public values are safe to expose; the ephemeral private values and the
+shared secret `K` never leave the endpoints.
+[Key agreement](./crypto-key-agreement.md#diffiehellman-as-a-black-box) and
+[key encapsulation](./crypto-post-quantum.md#key-encapsulation-as-a-black-box)
+explain why. "Ephemeral" means generated for this exchange and then
+discarded, so a later compromise of the server's long-term host key does not
+reveal past traffic: this is
 [*forward secrecy*](./crypto-key-agreement.md#forward-secrecy).
 
-The server host key serves a different lifetime and purpose. It is normally
-persistent so clients can recognize the server across connections, and its
-private half signs the exchange hash.
+The host key has a different lifetime and purpose. It persists so clients can
+recognize the server across connections, and its private half signs the
+exchange hash.
 
 ## Key agreement is method-specific
 
-The negotiated method defines how the endpoints exchange public material,
-validate peer inputs, and derive the shared secret `K`. Finite-field
-Diffie–Hellman, ECDH, and post-quantum hybrid methods use different messages
-and checks, but they feed the same later SSH stages: compute the exchange hash,
-verify the host-key signature, and derive traffic keys.
-[Key agreement](./crypto-key-agreement.md#diffiehellman-as-a-black-box) and
-[key encapsulation](./crypto-post-quantum.md#key-encapsulation-as-a-black-box)
-explain why the public values can be exposed while `K` stays secret.
-
-The protocol invariant is exactness. Each endpoint must follow the selected
-method's wire encodings and reject invalid public values. It must not import
-validation rules from a similar-looking method.
-
-The optional [Key-exchange method survey](./key-exchange-methods.md) compares
-fixed-group DH, group exchange, ECDH, X25519, and standardized hybrid methods.
+Each method defines its own messages, public-value encodings, validation
+rules, and derivation of `K`. Finite-field Diffie–Hellman, ECDH, and
+post-quantum hybrids differ in all four, but they feed the same later stages:
+compute the exchange hash, verify the host-key signature, derive traffic
+keys. Each endpoint must follow the selected method's encodings and reject
+invalid public values by that method's rules, never by those of a
+similar-looking method. The optional
+[Key-exchange method survey](./key-exchange-methods.md) compares the
+families.
 
 ## The exchange hash: authenticate the whole decision
 
-Deriving the same secret is not enough. The client must know that an attacker
-did not alter the version strings, proposals, host key, or ephemeral values.
-SSH serializes those values and hashes them into the exchange hash `H`. The
-[hash function](./crypto-hashes.md) is the one named by the KEX method, such
-as SHA-256 for `curve25519-sha256`.
+Agreeing on a secret is not enough. The client must also know that nobody
+altered the version strings, proposals, host key, or ephemeral values on the
+way. SSH serializes those values, together with `K`, and hashes them into the
+exchange hash `H`, using the [hash](./crypto-hashes.md) named by the KEX
+method (SHA-256 for `curve25519-sha256`).
+[The exchange hash commits to the transcript](./crypto-hashes.md#the-exchange-hash-commits-to-the-transcript)
+explains why signing a hash covers the whole transcript.
 
-For the classic DH flow in
-[RFC 4253, Section 8](https://www.rfc-editor.org/rfc/rfc4253.html#section-8),
-and for the ECDH flow in
-[RFC 5656, Section 4](https://www.rfc-editor.org/rfc/rfc5656.html#section-4),
-which [RFC 8731](https://www.rfc-editor.org/rfc/rfc8731.html) reuses for
-X25519, the inputs are:
+For classic DH
+([RFC 4253, Section 8](https://www.rfc-editor.org/rfc/rfc4253.html#section-8))
+and ECDH
+([RFC 5656, Section 4](https://www.rfc-editor.org/rfc/rfc5656.html#section-4),
+reused for X25519 by [RFC 8731](https://www.rfc-editor.org/rfc/rfc8731.html)),
+the inputs are:
 
 ```text
 Classic DH:  H = HASH(V_C || V_S || I_C || I_S || K_S || e   || f   || K)
 ECDH:        H = HASH(V_C || V_S || I_C || I_S || K_S || Q_C || Q_S || K)
 ```
 
-Where:
+- `V_C`, `V_S`: the identification lines without CRLF;
+- `I_C`, `I_S`: the exact `KEXINIT` payloads, starting with the message number;
+- `K_S`: the encoded server public host key;
+- `e`, `f`: the DH public values, encoded as `mpint`;
+- `Q_C`, `Q_S`: the ephemeral public keys, encoded as `string`;
+- `K`: the shared secret, encoded as `mpint`.
 
-- `V_C`, `V_S` are the identification lines without CRLF;
-- `I_C`, `I_S` are the exact `KEXINIT` payloads, starting with their message
-  number;
-- `K_S` is the encoded server public host key;
-- `e`, `f` are the client and server DH public values, encoded as `mpint`;
-- `Q_C`, `Q_S` are the client and server ephemeral public keys, encoded as
-  `string`; and
-- `K` is the shared secret, encoded as `mpint` in both forms.
+Each item is serialized with its SSH wire type before hashing; `||` is not raw
+byte concatenation. Group exchange adds the requested sizes and the chosen
+group, and hybrid post-quantum methods hash their combined messages and encode
+`K` as a `string` (see
+[What varies by method](./key-exchange-methods.md#what-varies-by-method)). The
+security role of `H` is the same for all of them.
 
-This is conceptual notation rather than raw byte-array concatenation: each item
-is serialized with its SSH wire type before hashing. The two forms differ only
-in the ephemeral values. Group exchange also hashes the requested sizes and
-the chosen group, and hybrid post-quantum methods hash their combined
-messages and encode `K` as a `string`; see the
-[method survey](./key-exchange-methods.md#what-varies-by-method). Each method
-therefore has its own wire definition of `H`, even though its security role is
-the same.
-
-Because the proposals are included, an attacker cannot silently delete a
-stronger shared algorithm from the lists to force a weaker mutual choice. The
-server and client would hash different `KEXINIT` payloads and signature
-verification would fail.
+Because both proposals are hashed, an attacker cannot delete a stronger shared
+algorithm from the lists to force a weaker choice: client and server would
+hash different `KEXINIT` payloads, and signature verification would fail.
 
 ### The host-key signature and the trust decision
 
-The server signs `H` with its host private key. The client verifies the
-signature using `K_S`, the public host key carried in the reply. This proves
-that one entity controlled both the KEX response and the private key matching
-`K_S`. The negotiated host-key algorithm, such as `ssh-ed25519` or
-`rsa-sha2-256`, fixes the
+The server signs `H` with its host private key, and the client verifies the
+signature with `K_S` from the reply. This proves that one entity produced the
+KEX reply and holds the private key matching `K_S`. The negotiated host-key
+algorithm, such as `ssh-ed25519` or `rsa-sha2-256`, fixes the
 [signature scheme](./crypto-signatures.md#signatures-as-a-black-box) and its
 encoding.
 
-The client must then establish that `K_S` is acceptable for the intended host,
-for example by:
-
-- matching a previously pinned key in a known-hosts database;
-- validating an SSH host certificate under a trusted certification key; or
-- asking a user to verify a fingerprint through an independent channel.
-
-Skipping or merging these two gates causes security bugs. A valid signature
-made by an attacker's own key is still a valid signature; it is not evidence
-that the key belongs to the requested server. The two checks may occur in
-either order, but both properties are required for an authenticated KEX.
+Separately, the client must decide that `K_S` is acceptable for the intended
+host: a pinned `known_hosts` entry, a host certificate from a trusted CA, a
+DNSSEC-validated SSHFP record, or a fingerprint checked through an
+independent channel. [Server authentication](./server-authentication.md)
+covers these. The two checks may happen in either order, but both are
+required. A valid signature made with an attacker's key is still a valid
+signature; it says nothing about whose key it is.
 
 ## From `K` and `H` to traffic keys
 
-The KEX method outputs the shared secret `K` and exchange hash `H`. The SSH
-key derivation hashes them together with the session identifier and a
-one-letter label, `A` through `F`, to produce six values: an initial IV, an
-encryption key, and an integrity key for each direction
+The SSH key derivation hashes `K` and `H` with the session identifier and a
+one-letter label, `A` through `F`, producing an initial IV, an encryption key,
+and an integrity key for each direction
 ([RFC 4253, Section 7.2](https://www.rfc-editor.org/rfc/rfc4253.html#section-7.2)).
-[Key derivation in SSH](./crypto-hashes.md#key-derivation-in-ssh) shows the
-construction, including how it extends a value that needs more bytes than one
-hash output.
+[Key derivation in SSH](./crypto-hashes.md#key-derivation-in-ssh) gives the
+exact construction, including how it produces more bytes than one hash output.
 
-All six values are derived after every exchange, but the negotiated
-algorithms decide which ones they use and how many bytes they take. An AEAD
-cipher, for example, leaves both integrity keys unused, and
-`chacha20-poly1305@openssh.com` also ignores the IVs.
-
-Independent directional keys prevent a packet sent in one direction from
-being replayed as if it came from the other and keep each direction's cipher
-state separate.
+The negotiated algorithms decide which of the six values they use and how many
+bytes they take. An AEAD cipher leaves both integrity keys unused, and
+`chacha20-poly1305@openssh.com` also ignores the IVs. Separate keys per
+direction keep each direction's cipher state independent and stop a packet
+from being reflected back as if it came from the other side.
 
 ### Session identifier versus exchange hash
 
-On the first KEX:
+The first exchange hash becomes the session identifier:
 
 ```text
 session_id = H_first
 ```
 
-On a rekey, a new exchange produces fresh `K` and a new `H`, but
-`session_id` remains `H_first` for the entire SSH connection.
+A rekey produces fresh `K` and `H`, but `session_id` stays `H_first` for the
+whole connection.
 
 ```mermaid
 timeline
@@ -191,20 +165,20 @@ timeline
                 : keys derived from K3, H3, session_id
 ```
 
-The stable identifier binds later protocols—most notably public-key user
-authentication—to this SSH connection even as its transport keys change. The
-latest `H` never replaces it.
+The stable identifier binds later protocol steps to this connection even as
+the transport keys change. Public-key user authentication signs it, and
+OpenSSH's [host-key rotation](./server-authentication.md#host-key-rotation)
+proofs cover it.
 
 ## Activating keys with `SSH_MSG_NEWKEYS`
 
-Key derivation alone does not define the byte at which an endpoint should
-switch algorithms. `SSH_MSG_NEWKEYS` is the boundary marker, independently for
-each direction.
+Derived keys need a defined switch-over point. `SSH_MSG_NEWKEYS` marks it,
+independently for each direction:
 
-- Immediately after sending `NEWKEYS`, use the new algorithms and keys for
-  subsequent outbound packets.
-- When receiving `NEWKEYS`, use the new algorithms and keys for subsequent
-  inbound packets.
+- after *sending* `NEWKEYS`, an endpoint protects its outbound packets with
+  the new keys;
+- after *receiving* `NEWKEYS`, it expects its inbound packets under the new
+  keys.
 
 ```mermaid
 sequenceDiagram
@@ -219,56 +193,41 @@ sequenceDiagram
     S->>C: First packet under new S→C keys
 ```
 
-The messages may cross on the network, creating a brief interval in which one
-direction uses new keys while the other still uses old keys. Under strict KEX,
-each direction's packet sequence number is also reset just after its
-corresponding `NEWKEYS` boundary.
-
-Only after key activation can extension information and higher-layer service
-requests proceed in the newly protected transport. See [RFC 4253, Section
-7.3](https://www.rfc-editor.org/rfc/rfc4253.html#section-7.3) and [RFC
-8308](https://www.rfc-editor.org/rfc/rfc8308.html) for the post-KEX extension
-exchange.
+The two messages may cross, so for a moment one direction uses new keys while
+the other still uses old ones. Under
+[strict KEX](./version-and-negotiation.md#strict-key-exchange), each
+direction's sequence number also resets at its `NEWKEYS`. Extension
+information and the `ssh-userauth` service request follow under the new keys
+([RFC 4253, Section 7.3](https://www.rfc-editor.org/rfc/rfc4253.html#section-7.3);
+[RFC 8308](https://www.rfc-editor.org/rfc/rfc8308.html)).
 
 ## Rekeying a live connection
 
-SSH can repeat key exchange without opening a new TCP connection or repeating
-user authentication. Either endpoint starts a rekey by sending a new
-`SSH_MSG_KEXINIT`; the other responds with its proposal.
+Either endpoint can run a new key exchange at any time by sending a fresh
+`SSH_MSG_KEXINIT`, without a new TCP connection or new user authentication.
+Reasons include limiting how much traffic one set of keys protects, refreshing
+long-lived connections, and moving to an algorithm both peers now prefer. RFC
+4253 recommends rekeying after each gigabyte or hour, whichever comes first;
+endpoints may be stricter, and some ciphers impose tighter
+[usage limits](./crypto-symmetric.md#usage-limits-and-rekeying).
 
-Why rekey?
+During a rekey:
 
-- limit how much traffic is protected by one set of keys;
-- replace keys after an endpoint-defined time or byte count;
-- negotiate a new algorithm policy that both endpoints now offer; or
-- refresh the cryptographic state of a long-lived connection.
+- KEX packets are protected by the *old* keys until each direction's
+  `NEWKEYS`;
+- client and server roles stay the same;
+- fresh `K` and `H` are produced, but the session identifier does not change;
+- from sending its own `KEXINIT` until sending its own `NEWKEYS`, a peer sends
+  only transport, negotiation, and KEX messages, pausing authentication and
+  connection traffic
+  ([RFC 4253, Section 7.1](https://www.rfc-editor.org/rfc/rfc4253.html#section-7.1)).
 
-RFC 4253 recommends rekeying after one gigabyte or one hour, whichever comes
-first. This is a default recommendation, not a universal limit. Endpoints may
-use stricter policy, and selected algorithms can impose stricter limits; see
-[Usage limits and rekeying](./crypto-symmetric.md#usage-limits-and-rekeying).
-
-During rekey:
-
-- the KEX packets are protected by the *old* algorithms until each directional
-  `NEWKEYS` transition;
-- client and server roles do not change;
-- fresh `K` and `H` values are produced;
-- the original session identifier does not change; and
-- each sender pauses new authentication and connection messages from its own
-  `KEXINIT` until it sends its own `NEWKEYS`.
-
-A peer can receive an arbitrary number of application packets that were
-already in flight before it sees the other side's `KEXINIT`. This is why the
-rekey transition is not an instantaneous, connection-wide boundary.
-
-For example, after sending `KEXINIT`, the client must still accept channel
-data sent before the server's `KEXINIT`. Once the server's `KEXINIT` arrives,
-that earlier data is finished because the underlying stream preserves order.
-After sending `NEWKEYS`, a peer can resume higher-layer messages under its new
-outbound keys without waiting for the other direction to switch. The exact
-send restriction is in
-[RFC 4253 section 7.1](https://www.rfc-editor.org/rfc/rfc4253#section-7.1).
+The pause applies to what a peer *sends*, not what it receives. Application
+packets the peer sent before its `KEXINIT` may still be in flight, so after
+sending `KEXINIT` the client must keep accepting channel data until the
+server's `KEXINIT` arrives; the ordered stream guarantees nothing older
+follows it. After sending its `NEWKEYS`, a peer may resume higher-layer
+traffic under its new outbound keys without waiting for the other direction.
 
 ```mermaid
 sequenceDiagram
@@ -284,15 +243,12 @@ sequenceDiagram
     Note over C,S: Resume with fresh directional keys
 ```
 
-Crossed `NEWKEYS` messages, simultaneous KEX initiation, and application data
-already in flight all follow from the two independent directions shown above.
-
 ## Putting it together: one modern connection
 
-The following sequence shows an initial exchange with algorithms that a
-current OpenSSH client and server select by default: the hybrid
-`mlkem768x25519-sha256` key exchange, an `ssh-ed25519` host key, and
-`chacha20-poly1305@openssh.com` packet protection in both directions.
+The following initial exchange uses the algorithms a current OpenSSH client
+and server select by default: `mlkem768x25519-sha256` key exchange, an
+`ssh-ed25519` host key, and `chacha20-poly1305@openssh.com` in both
+directions.
 
 ```mermaid
 sequenceDiagram
@@ -314,7 +270,7 @@ sequenceDiagram
     C->>S: SERVICE_REQUEST ssh-userauth, encrypted and authenticated
 ```
 
-Every box in that picture has one cryptographic job:
+Each step has one cryptographic job:
 
 | Step | Primitive | Explained in |
 | --- | --- | --- |
@@ -325,23 +281,21 @@ Every box in that picture has one cryptographic job:
 | Traffic keys | SSH key derivation with SHA-256 | [Key derivation in SSH](./crypto-hashes.md#key-derivation-in-ssh) |
 | Packet protection | ChaCha20-Poly1305 AEAD | [ChaCha20-Poly1305](./crypto-symmetric.md#chacha20-poly1305) |
 
-The trust decision about `K_S` is the one step with no cryptographic
-primitive of its own: it is local policy, covered in
-[Server authentication](./server-authentication.md).
+The trust decision about `K_S` has no primitive of its own: it is local
+policy, covered in [Server authentication](./server-authentication.md).
 
 ## Security invariants
 
-The essential invariants across initial KEX and rekey are:
+Across the initial exchange and every rekey:
 
-- ephemeral private values are unpredictable and are never sent;
-- received public values have the exact encoding, length, group membership,
-  and special-value checks required by the selected method;
-- the exchange hash uses exact on-wire transcript values and type encodings;
-- host signature validity and host identity trust are distinct properties;
-- key derivation produces independent material for both directions;
-- sending and receiving switch keys at their own `NEWKEYS` boundaries;
-- the session identifier is assigned once, from the first `H`;
-- a rekey retains roles and the session identifier but replaces traffic keys.
+- ephemeral private values are unpredictable and never sent;
+- received public values pass the encoding, length, group-membership, and
+  special-value checks of the selected method;
+- the exchange hash uses the exact on-wire values and type encodings;
+- host signature validity and host identity trust are checked separately;
+- each direction gets independent keys and switches at its own `NEWKEYS`;
+- the session identifier is set once, from the first `H`;
+- a rekey keeps roles and the session identifier but replaces traffic keys.
 
 ## Check your understanding
 
@@ -358,22 +312,25 @@ The essential invariants across initial KEX and rekey are:
 <details>
 <summary>Answers</summary>
 
-1. The server host key. Ephemeral ECDH keys are freshly generated for a KEX.
-2. It proves that the holder of the private key corresponding to `K_S`
-   approved that exchange hash. A separate trust check establishes whether
-   `K_S` represents the intended host.
-3. To bind algorithm negotiation into the authenticated transcript and detect
-   modification or downgrade.
+1. The server host key. Ephemeral ECDH keys are generated for one KEX.
+2. It proves that the holder of the private key matching `K_S` approved that
+   exchange hash. A separate trust check decides whether `K_S` represents the
+   intended host.
+3. To bind algorithm negotiation into the authenticated transcript, so that
+   tampering or a downgrade makes signature verification fail.
 4. Methods use different encodings, groups, and invalid-value checks. A value
-   accepted under another method's rules may be unsafe or malformed here.
-5. New keys are active for the client's outbound direction. Its inbound
-   direction still uses the old keys until it receives server `NEWKEYS`.
+   acceptable under another method's rules may be unsafe or malformed here.
+5. Only the client's outbound keys. Its inbound direction uses the old keys
+   until the server's `NEWKEYS` arrives.
 6. No. It remains the first exchange hash for the life of the connection.
 
 </details>
 
-## Primary references
+## References
 
 - [RFC 4253 — SSH Transport Layer Protocol](https://www.rfc-editor.org/rfc/rfc4253.html), Sections 7–9.
+- [RFC 5656 — Elliptic Curve Algorithm Integration in SSH](https://www.rfc-editor.org/rfc/rfc5656.html), Section 4.
+- [RFC 8731 — SSH KEX Using Curve25519 and Curve448](https://www.rfc-editor.org/rfc/rfc8731.html).
 - [RFC 8308 — Extension Negotiation in SSH](https://www.rfc-editor.org/rfc/rfc8308.html).
-- [Key-exchange method survey](./key-exchange-methods.md) — optional details and method RFCs.
+- [RFC 10042 — Post-Quantum/Traditional Hybrid Key Exchange with the Module-Lattice-Based Key-Encapsulation Mechanism for Use in SSH](https://www.rfc-editor.org/rfc/rfc10042.html).
+- [Key-exchange method survey](./key-exchange-methods.md) for the other method RFCs.

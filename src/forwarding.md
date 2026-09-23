@@ -1,14 +1,13 @@
 # TCP forwarding
 
-TCP forwarding uses SSH channels as byte relays. It lets one endpoint request
-a connection from the other endpoint's network position. Channel identifiers,
-windows, and close behavior follow
+TCP forwarding uses SSH channels as byte relays: one endpoint asks for a
+connection made from the other endpoint's network position. Channel
+identifiers, windows, and close behavior follow
 [Channels and flow control](./channels.md).
 
-The familiar labels *local*, *dynamic*, and *remote* forwarding describe local
-client behavior. On the SSH wire, the core mechanisms are `direct-tcpip`
-channels and a combination of `tcpip-forward` requests with
-`forwarded-tcpip` channels.
+The labels *local*, *dynamic*, and *remote* describe client behavior. On the
+wire there are two mechanisms: `direct-tcpip` channels, and `tcpip-forward`
+requests followed by `forwarded-tcpip` channels.
 
 | User-facing mode | Listener | SSH action for each connection | Peer that connects to target |
 | --- | --- | --- | --- |
@@ -31,12 +30,11 @@ string    originator IP address
 uint32    originator port
 ```
 
-The client normally sends this open to the server. RFC 4254 recommends that
-clients reject server-initiated `direct-tcpip` opens.
+The client normally sends this open; RFC 4254 recommends that clients reject
+server-initiated `direct-tcpip` opens.
 
-For a conceptual local forward
-`-L 127.0.0.1:8080:db.internal:5432`, the client listens locally. Each accepted
-connection creates a new channel:
+For a local forward `-L 127.0.0.1:8080:db.internal:5432`, the client listens
+locally, and each accepted connection creates a new channel:
 
 ```mermaid
 sequenceDiagram
@@ -56,16 +54,15 @@ sequenceDiagram
     end
 ```
 
-The server resolves the target name and makes the connection. The target may
-be visible from the server's network but not from the client. The originator
-address is peer-supplied context; it is not an authenticated user identity.
+The server resolves the target name and connects, so the target need only be
+reachable from the server's network. The originator address is peer-supplied
+context, not an authenticated identity.
 
-Local dynamic forwarding (`-D`) differs before the channel opens. The SSH
+Local dynamic forwarding (`-D`) differs only before the channel opens. The
 client accepts a SOCKS request, extracts its destination, and opens a
-`direct-tcpip` channel for that destination. In this mode, SOCKS negotiation
-terminates at the client and does not cross the SSH connection. If the
-application supplies a numeric address, no name resolution is needed at the
-server; if it supplies a hostname, the server can resolve it.
+`direct-tcpip` channel to it. SOCKS negotiation ends at the client and never
+crosses the SSH connection. A numeric destination needs no resolution at the
+server; a hostname is resolved there.
 
 ## Requesting a remote listener
 
@@ -94,47 +91,41 @@ sequenceDiagram
     end
 ```
 
-The forwarded-channel fields contain the server address that received the
-connection and the reported originator. They do not contain the client-side
-target. The client remembers that target as part of the forwarding request's
-local state.
+The `forwarded-tcpip` open carries the server address that accepted the
+connection and the reported originator, not the client-side target. The client
+keeps that target in its own state for the forwarding request.
 
-If the requested port is zero, the server allocates a port. A successful reply
-then carries the allocated port as a `uint32`. The client needs that value
-before it can report where the listener exists.
+If the requested port is zero, the server allocates one and returns it as a
+`uint32` in `REQUEST_SUCCESS`. The client needs it to report where the
+listener is.
 
 OpenSSH also supports *remote dynamic forwarding*: an `-R` listener with no
-fixed target. Here the server relays each accepted stream in a
-`forwarded-tcpip` channel, and the client interprets SOCKS inside that stream
-to choose and connect to the target. Unlike local `-D`, this carries SOCKS
-negotiation through SSH. The server needs ordinary remote-forwarding support;
-it does not interpret SOCKS. See the
+fixed target. The server relays each accepted stream in a `forwarded-tcpip`
+channel, and the client interprets SOCKS inside that stream to choose and
+connect to the target. Unlike local `-D`, SOCKS negotiation crosses SSH, but
+the server needs only ordinary remote-forwarding support. See the
 [`ssh(1)` description of `-R`](https://man.openbsd.org/ssh#R).
 
 ## Cancellation and races
 
-The client cancels a listener with `cancel-tcpip-forward`, using the same bind
-address and actual listener port. If the request used port zero, this means the
-allocated port returned in `REQUEST_SUCCESS`, not zero. The client should wait
-for a reply when it needs a clear end boundary.
+The client cancels a listener with `cancel-tcpip-forward`, giving the same
+bind address and the actual port (the allocated one, not zero, if it asked for
+port zero). It should request a reply when it needs a clear end boundary.
 
-A forwarded connection can race with cancellation. A channel open that was
-already in flight may arrive before the cancellation result. The client must
-match each `forwarded-tcpip` open to forwarding state that was authorized when
-the server accepted the connection; it must reject unsolicited opens.
+Cancellation races with new connections: a `forwarded-tcpip` open already in
+flight may arrive before the cancellation reply. The client matches each open
+to forwarding state that was authorized when the server accepted the
+connection, and rejects unsolicited opens.
 
-Cancellation stops new connections to the listener; it does not close channels
-for connections already accepted. Those keep their own EOF and CLOSE lifecycle.
-
-Closing a shell channel does not cancel a listener or close existing forwarded
-channels. They are independent connection-protocol objects. Ending the SSH
+Cancellation stops new connections only; channels already open keep their own
+EOF and CLOSE lifecycle. Closing a shell channel neither cancels a listener nor
+closes forwarded channels, because they are independent objects. Ending the
 transport ends all of them.
 
 ## Where protection ends
 
-SSH protects channel data only between the SSH client and SSH server.
-
-For a local forward, the path is:
+SSH protects channel data only between the SSH client and server. For a local
+forward:
 
 ```mermaid
 flowchart LR
@@ -143,31 +134,27 @@ flowchart LR
     S -->|"target TCP"| T["Target service"]
 ```
 
-For local or dynamic forwarding, the server-to-target connection needs its own
-application security if the target network is untrusted. SSH does not verify
-the target's identity.
+The server-to-target leg needs its own application security if that network
+is untrusted; SSH does not verify the target's identity.
 
-The application-to-client leg is also outside SSH protection. Binding the
-client's listener to loopback restricts that leg to the local host; it does
-not authenticate which local process connected. A wildcard local bind can
-give other machines access to the forward, subject to network reachability
-and policy.
+The application-to-client leg is also outside SSH. A loopback listener limits
+it to the local host but does not authenticate which local process connected;
+a wildcard bind can admit other machines, subject to reachability and policy.
+For remote forwarding, the server-side bind works the same way: loopback
+normally limits who can connect, and a wildcard bind can expose the
+client-side target to any host that reaches the server.
 
-For remote forwarding, listener scope controls exposure. A loopback bind
-normally limits who can connect on the server. A wildcard bind can expose the
-client-side target to other hosts that can reach the server.
-
-Forwarding also changes reachability. A direct channel may reach an internal
-server-side service. A remote listener may expose a private client-side
-service. Server and client policy can restrict bind addresses, ports, and
-targets before granting these capabilities.
+Forwarding therefore changes reachability. A direct channel may reach an
+internal server-side service; a remote listener may expose a private
+client-side one. Client and server policy can restrict bind addresses, ports,
+and targets before granting either.
 
 ## SSH through a jump host
 
-A forwarded byte stream can itself carry another SSH transport. With a single
-OpenSSH `ProxyJump`, the local client authenticates to the jump host and opens
-a `direct-tcpip` channel to the final server's SSH port. It then runs a second
-SSH handshake with the final server through that channel.
+A forwarded byte stream can carry another SSH transport. With a single
+OpenSSH `ProxyJump`, the client authenticates to the jump host, opens a
+`direct-tcpip` channel to the final server's SSH port, and runs a second SSH
+handshake through it.
 
 ```mermaid
 flowchart LR
@@ -177,31 +164,24 @@ flowchart LR
 ```
 
 The two transports have separate host identities, session identifiers, and
-rekey state. Once the inner transport is protected, the jump host relays its
-ciphertext; it does not receive the final login credentials or command
-plaintext. It can still observe the inner handshake and traffic metadata,
-interrupt delivery, or attempt interference that the final host check must
-detect. This arrangement does not require agent forwarding or placing a user
-private key on the jump host. See
+rekey state. The jump host relays inner ciphertext and never sees the final
+login credentials or command plaintext. It can still observe the inner
+handshake and traffic metadata, interrupt delivery, or attempt interference
+that the final host-key check must detect. No agent forwarding and no private
+key on the jump host are needed. See
 [`ProxyJump` in `ssh_config(5)`](https://man.openbsd.org/ssh_config#ProxyJump).
 
 ## Related channels are separate protocols
 
-X11 forwarding, agent forwarding, and Unix-domain-socket forwarding use
-additional channel types or requests. They are not alternative spellings of
-TCP forwarding.
+Agent forwarding, X11 forwarding, and Unix-domain-socket forwarding use their
+own channel types and requests; they are not variants of TCP forwarding. When
+`-L` or `-R` names a socket path instead of a port, OpenSSH uses the
+Unix-socket variants. See
+[Agent, X11, and Unix-socket forwarding](./other-channels.md), in particular
+[agent forwarding](./other-channels.md#agent-forwarding), whose remote end
+gains a signing service rather than key bytes.
 
-Agent forwarding has a particularly sharp boundary: the remote host receives
-access to a signing service, not the private-key bytes. A compromised remote
-host may still ask that service to sign while the forwarding channel is open.
-Key constraints and
-[host-bound authentication](./user-authentication.md#host-bound-public-key-authentication)
-can narrow this delegated capability, and a
-[FIDO security key](./fido-security-keys.md#agents-forwarding-and-jump-hosts)
-makes each signature wait for a touch, but ordinary SSH transport protection
-does not remove it.
-
-## Check the viewpoint
+## Check your understanding
 
 1. Who resolves a `direct-tcpip` target name?
 2. Where is SOCKS interpreted during local dynamic forwarding (`-D`)?

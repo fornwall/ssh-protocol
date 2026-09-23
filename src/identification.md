@@ -7,38 +7,49 @@ authenticated key-exchange transcript.
 
 ## The identification line
 
-The line has this form:
+The line has this form, where square brackets mark the optional comment and
+its preceding space:
 
 ```text
 SSH-protoversion-softwareversion [SP comments] CR LF
 ```
 
-Square brackets mark an optional part: the comment and its preceding space
-may be omitted. `SP` denotes a space, and `CR LF` denotes the line ending.
-
-For example, an OpenSSH 9.6 client might send:
+An OpenSSH client might send:
 
 ```text
-SSH-2.0-OpenSSH_9.6<CR><LF>
+SSH-2.0-OpenSSH_10.5<CR><LF>
 ```
 
 An Ubuntu-packaged OpenSSH server might send:
 
 ```text
-SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13<CR><LF>
+SSH-2.0-OpenSSH_10.2p1 Ubuntu-2ubuntu3.6<CR><LF>
 ```
 
-In the server example, `OpenSSH_9.6p1` is the software version and
-`Ubuntu-3ubuntu13` is the optional comment.
+Here `OpenSSH_10.2p1` is the software version and `Ubuntu-2ubuntu3.6` is the
+comment.
 
-The complete line is at most 255 characters including CRLF and must not
-contain NUL. Version `2.0`
-selects the protocol described by the SSH version 2 RFCs. The historical
-value `1.99` also advertises version 2 compatibility; it is not a separate
-protocol version.
+The rules from
+[RFC 4253, section 4.2](https://www.rfc-editor.org/rfc/rfc4253#section-4.2):
 
-The peers may send their lines without waiting for each other. The exchange
-has no request-response order.
+- The complete line is at most 255 characters including CR LF and must not
+  contain NUL.
+- `protoversion` and `softwareversion` are printable US-ASCII without spaces
+  or `-`.
+- `protoversion` is `2.0`. The historical value `1.99` means a server that
+  also accepts SSH version 1; for a version 2 client it is equivalent to
+  `2.0`, not a separate protocol.
+- The line must end in CR LF, although implementations that want to talk to
+  very old peers may also accept a bare LF.
+
+`softwareversion` is not decoration. Implementations match it against known
+peers to enable workarounds for their bugs; OpenSSH logs this as
+`compat_banner: match: ...` in verbose mode. The client cannot trust the value
+before key exchange authenticates it, and even then it only reports what the
+server chose to claim.
+
+The peers may send their lines without waiting for each other; there is no
+request-response order.
 
 ```mermaid
 sequenceDiagram
@@ -54,19 +65,20 @@ sequenceDiagram
     end
 ```
 
-This guide uses two related terms:
+This guide distinguishes two terms:
 
 - **identification line**: the transmitted bytes, including the line ending;
 - **identification string**: the value placed in the exchange hash, without
   the line ending.
 
-Keeping the distinction avoids hashing a reconstructed or normalized value.
+The exchange hash uses the exact received bytes of the string, never a
+reconstructed or normalized value.
 
 ## Server lines before identification
 
-A server may send other lines before its SSH identification line. This was
-designed for notices from wrappers and gateways. A conforming client accepts
-these lines until it finds a line beginning with `SSH-`.
+A server may send other lines before its identification line, originally so
+that TCP wrappers could explain why they were about to disconnect. A client
+must accept such lines until it finds one beginning with `SSH-`.
 
 ```text
 This system is restricted to authorized users.<CR><LF>
@@ -74,75 +86,80 @@ Maintenance window: Sunday 02:00 UTC.<CR><LF>
 SSH-2.0-ExampleServer_4.2<CR><LF>
 ```
 
-Pre-identification lines must not begin with `SSH-`. They are not included in
-the exchange hash. If a client displays them, it should filter terminal
-control characters. They are peer-controlled text.
+These lines must not begin with `SSH-` and are not part of the exchange hash.
+They are unauthenticated, peer-controlled text: a client that displays them
+should filter terminal control characters. The OpenSSH client shows them only
+in verbose mode, as `banner line` debug messages. This is not the
+authentication banner (`SSH_MSG_USERAUTH_BANNER`), which arrives later over
+the protected transport.
 
-The OpenSSH client does not display these lines by default; with verbose
-mode (`-v`), it displays them as debug messages.
-
-This allowance is asymmetric. The client's identification line is its first
+The allowance is asymmetric: the client's identification line is its first
 line on the connection.
 
 ## The boundary to binary packets
 
-There is no content-type marker between the line exchange and binary SSH.
-After the LF that terminates an endpoint's identification line, that endpoint's
-next byte starts its first binary packet.
+No marker separates the line exchange from binary SSH. After the LF that ends
+an endpoint's identification line, that endpoint's next byte starts its first
+binary packet.
 
 ```text
 ... ExampleServer_4.2 CR LF | 00 00 04 ec ...
                              ^ first binary-packet byte
 ```
 
-The first packet is normally `SSH_MSG_KEXINIT`. TCP may deliver the line and
-part of this packet in one read. Read boundaries do not change the protocol
-boundary.
+The first packet is normally `SSH_MSG_KEXINIT`. One TCP read may return the
+line and part of this packet together; read boundaries do not move the
+protocol boundary.
 
-## Cleartext authenticated later
+## Cleartext, authenticated later
 
 Identification lines are cleartext. A network observer can read them, and an
-active attacker can change bytes before key exchange has authenticated the
+active attacker can change them before key exchange has authenticated the
 connection.
 
-Key exchange later hashes the exact client and server identification strings
-into the
-[exchange hash](./key-exchange.md#the-exchange-hash-authenticate-the-whole-decision).
-The server signs that hash. A simple in-transit change
-makes the client and server compute different hashes, so signature verification
-fails. A full machine-in-the-middle can instead conduct two self-consistent
-exchanges and sign one with a substituted host key; the client's host-key trust
-check rejects that case.
+Key exchange later hashes both identification strings into the
+[exchange hash](./key-exchange.md#the-exchange-hash-authenticate-the-whole-decision),
+which the server signs. A simple in-transit change makes the client and server
+compute different hashes, so the exchange fails. A full machine-in-the-middle
+can instead run two self-consistent exchanges and sign one with its own host
+key; the client's host-key trust check rejects that case.
 
-This is retrospective authentication, not confidentiality. A successful
-handshake detects modification of the identification strings but never hides
-them.
+This is retrospective authentication, not confidentiality: a successful
+handshake proves the strings were not modified but never hides them.
 
-## Check the boundary
+## Check your understanding
 
 1. Can the server send a notice before its identification line? Can the
    client?
-2. Does CRLF enter the exchange hash?
+2. Does CR LF enter the exchange hash?
 3. If one TCP read contains the server line and 20 more bytes, what are those
    20 bytes?
 4. Why can a passive observer read an identification string even though the
    string is authenticated later?
+5. An attacker rewrites the server's line from `OpenSSH_10.2p1` to
+   `OpenSSH_7.4` to trigger old compatibility workarounds. What happens when
+   key exchange completes?
 
 <details>
 <summary>Answers</summary>
 
 1. The server can send other lines first, as long as none begins with `SSH-`.
    The client cannot: its identification line is its first line.
-2. No. The exchange hash uses the identification string, which excludes the
-   CR and LF.
-3. The first 20 bytes of the server's first binary packet, normally the start
-   of its `SSH_MSG_KEXINIT` packet.
+2. No. The exchange hash uses the identification string, which excludes CR
+   and LF.
+3. The first 20 bytes of the server's first binary packet, normally its
+   `SSH_MSG_KEXINIT`.
 4. Authentication detects modification after the fact; it does not encrypt.
    The lines are sent before any keys exist and are never encrypted.
+5. The client hashes the string it received and the server hashes the one it
+   sent, so the exchange hashes differ and the server's signature does not
+   verify. The client aborts, although it may already have acted on the
+   forged version while negotiating.
 
 </details>
 
 ## References
 
-- [RFC 4253, Section 4 — Connection Setup](https://www.rfc-editor.org/rfc/rfc4253.html#section-4)
-- [RFC 4253, Section 8 — Diffie-Hellman Key Exchange](https://www.rfc-editor.org/rfc/rfc4253.html#section-8)
+- [RFC 4253, section 4: Connection setup](https://www.rfc-editor.org/rfc/rfc4253#section-4)
+- [RFC 4253, section 5: Compatibility with old SSH versions](https://www.rfc-editor.org/rfc/rfc4253#section-5)
+- [RFC 4253, section 8: Diffie-Hellman key exchange](https://www.rfc-editor.org/rfc/rfc4253#section-8)

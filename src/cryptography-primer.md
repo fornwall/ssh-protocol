@@ -1,32 +1,22 @@
 # Cryptography as protocol building blocks
 
-An SSH connection is built from a small number of cryptographic primitives:
-a random generator, hash functions, key agreement, signatures, key
-derivation, and packet protection. SSH does not invent any of them. Its job
-is to *compose* them: to decide which bytes are hashed, which key signs what,
-how one shared secret becomes several independent keys, and when those keys
-start protecting traffic.
+So far, algorithm names have been labels that the peers negotiate. Before
+key exchange puts them to work, this part opens them. SSH invents no
+primitives; it *composes* standard ones, deciding which bytes are hashed,
+which key signs what, how one shared secret becomes several keys, and when
+those keys start protecting traffic.
 
-This chapter treats every primitive as a **black box** with typed inputs,
-typed outputs, and explicit failure results. That view is all the main
-narrative of the guide needs. The subchapters each open one box:
-
-- [Hashes, MACs, and key derivation](./crypto-hashes.md)
-- [Symmetric encryption and packet protection](./crypto-symmetric.md)
-- [Key agreement: Diffie–Hellman and elliptic curves](./crypto-key-agreement.md)
-- [Digital signatures](./crypto-signatures.md)
-- [Post-quantum key exchange](./crypto-post-quantum.md)
-
-They follow the same pattern: the black box and its role in SSH first, then
-collapsible *Go deeper* sections with the basic mathematics, a toy example,
-and links for further study. You can skip every *Go deeper* section and still
-follow the protocol.
+This chapter treats each primitive as a **black box** with typed inputs,
+outputs, and failure results, which is all the rest of the guide needs. Each
+subchapter opens one box, with optional *Go deeper* sections that explain
+why it works. They are not implementation recipes: real SSH software relies
+on reviewed libraries for the arithmetic, public-value validation, and
+constant-time operation.
 
 ## Security goals and who supplies them
 
-Before looking at boxes, name the properties a client wants from a
-connection. Each is supplied by a different primitive, and none of the
-primitives supplies all of them.
+A client wants several properties from a connection. Each comes from a
+different primitive, and no primitive supplies all of them.
 
 | Goal | Plain meaning | Supplied by |
 | --- | --- | --- |
@@ -37,37 +27,16 @@ primitives supplies all of them.
 | Transcript integrity | Nobody altered the negotiation or key-exchange values. | Hash of the transcript (the exchange hash), signed by the host key |
 | Forward secrecy | Stealing a long-term key later does not expose old traffic. | Fresh ephemeral key-agreement secrets that are erased after use |
 
-```mermaid
-flowchart LR
-    subgraph Goals
-        CONF["Confidentiality"]
-        INT["Integrity"]
-        SA["Server authenticity"]
-        UA["User authenticity"]
-        FS["Forward secrecy"]
-    end
-    KA["Ephemeral key agreement / KEM"] --> CONF
-    KA --> FS
-    KDF["Key derivation"] --> CONF
-    KDF --> INT
-    ENC["Cipher or AEAD"] --> CONF
-    MAC["MAC or AEAD tag<br/>+ sequence number"] --> INT
-    HASH["Exchange hash H"] --> SA
-    SIG["Host-key signature"] --> SA
-    TRUST["known_hosts or CA policy"] --> SA
-    USIG["User-key signature"] --> UA
-    POL["Server account policy"] --> UA
-```
-
-Two arrows in that diagram lead from *policy*, not cryptography. A
+Both authenticity goals rest partly on *policy*, not cryptography. A
 signature proves possession of a private key; only a trust decision says
 whether that key should represent the host or the user.
 
 ## The toolbox at a glance
 
-Each box has a narrow contract. Substituting one box for another—using a
-hash where a MAC is needed, or a signature where encryption is needed—is
-usually a security bug.
+Each box has a narrow contract, and SSH's security arguments are stated in
+terms of these contracts. Substituting one box for another—a hash where a
+MAC is needed, a signature where encryption is needed—is usually a security
+bug.
 
 | Primitive | Black-box contract | Where SSH uses it | What it does **not** do | Details |
 | --- | --- | --- | --- | --- |
@@ -81,17 +50,14 @@ usually a security bug.
 | KEM | `KEYGEN`, `ENCAPS(pk) → (ct, secret)`, `DECAPS(sk, ct) → secret \| failure` | Post-quantum hybrid key exchange | Authenticate either peer | [Post-quantum](./crypto-post-quantum.md#key-encapsulation-as-a-black-box) |
 | Signature | `SIGN(private, msg) → sig`, `VERIFY(public, msg, sig) → valid \| invalid` | Host key signs `H`; user key signs the session identifier and request; CAs sign certificates | Encrypt anything; decide whom to trust | [Signatures](./crypto-signatures.md) |
 
-The black-box interfaces matter because SSH's security arguments are
-stated in terms of them. The exchange hash is safe to sign because the hash
-is collision resistant. Traffic keys are independent because the key
-derivation separates them. A client does not need the internal mathematics
-to reason about the protocol; it needs to know which box is used where and
-which failure result must stop the connection.
+To reason about the protocol, a client needs to know which box is used
+where and which failure result must stop the connection, not the internal
+mathematics.
 
 ## One connection's cryptography
 
-The following three diagrams follow one connection from its first random
-byte to protected channel data. They correspond to the three jobs of
+Three diagrams follow one connection from its first random byte to
+protected channel data. They correspond to the jobs of
 [key exchange](./key-exchange.md) and to
 [public-key user authentication](./user-authentication.md#signed-request).
 
@@ -131,9 +97,8 @@ flowchart LR
     SEQ --> PS
 ```
 
-The letters `A`–`F` label six separately derived values;
-[Key derivation in SSH](./crypto-hashes.md#key-derivation-in-ssh) shows
-exactly how.
+The letters `A`–`F` label six separately derived values; see
+[Key derivation in SSH](./crypto-hashes.md#key-derivation-in-ssh).
 
 ### Authenticate the user: sign the session identifier
 
@@ -150,39 +115,42 @@ flowchart LR
     AUTHZ -->|"no"| FAIL["USERAUTH_FAILURE"]
 ```
 
-The session identifier appears in both the key derivation and the user's
-signature. That single value ties the user's proof to the exact key exchange
-that the server's signature authenticated.
+The session identifier feeds both the key derivation and the user's
+signature. That single value ties the user's proof to the key exchange that
+the server's signature authenticated.
 
-### The same primitives on the protocol timeline
+## Four kinds of key to keep separate
+
+The word "key" appears everywhere in SSH. Four kinds have different
+lifetimes, owners, and jobs:
+
+| Material | Lifetime | Main purpose |
+| --- | --- | --- |
+| Server host key | long-lived | identify the server and sign key exchange |
+| User authentication key | long-lived | prove the user's identity to the server |
+| Ephemeral KEX key/value | one exchange | establish a fresh shared secret |
+| Traffic key and IV | until rekey | protect packets in exactly one direction |
 
 ```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    C->>S: KEXINIT (random cookie)
-    S->>C: KEXINIT (random cookie)
-    Note over C,S: RANDOM
-    Note over C: RANDOM → ephemeral private value
-    C->>S: Ephemeral public value or KEM public key
-    S->>C: Host key, server public value or KEM ciphertext, SIGN(host key, H)
-    Note over S: AGREE / ENCAPS → K, HASH → H, SIGN(H)
-    Note over C: AGREE / DECAPS → K, HASH → H,<br/>VERIFY(H), trust check
-    Note over C,S: KDF → six values, erase ephemeral secrets
-    C->>S: NEWKEYS
-    S->>C: NEWKEYS
-    C->>S: USERAUTH_REQUEST with SIGN(user key, session_id ‖ request)
-    Note over C,S: Every packet: AEAD or cipher + MAC,<br/>keyed per direction, with sequence number
-    S->>C: USERAUTH_SUCCESS
-    C->>S: CHANNEL_OPEN, CHANNEL_DATA ...
-    Note over C,S: Rekey later: new K and H, same session_id
+flowchart LR
+    HK["Host key<br/>(years)"] -->|"signs"| H["Exchange hash H"]
+    EK["Ephemeral KEX keys<br/>(one exchange)"] -->|"produce"| K["Shared secret K"]
+    K --> TK["Traffic keys<br/>(until rekey)"]
+    H --> TK
+    UK["User key<br/>(years)"] -->|"signs"| SID["session_id ‖ request"]
 ```
+
+The host key only *signs* the exchange; it never encrypts the secret. Once
+the ephemeral secrets are erased, later theft of the host key therefore does
+not reveal old traffic. This
+[forward secrecy](./crypto-key-agreement.md#forward-secrecy) does not help
+if an endpoint, its random generator, or the plaintext was already
+compromised.
 
 ## Reading an algorithm name
 
-SSH negotiates algorithms by name. Many names hint at the primitives they
-contain, and learning to read them makes negotiation output and debug logs
-far more informative.
+Many algorithm names hint at the primitives inside, which helps when
+reading negotiation output and debug logs.
 
 ```mermaid
 flowchart TB
@@ -215,36 +183,19 @@ A name ending in `@domain` is a local extension defined by the owner of that
 domain rather than an IETF-registered name
 ([RFC 4251, section 6](https://www.rfc-editor.org/rfc/rfc4251#section-6)).
 
-> **Names are opaque identifiers.** The decomposition above is a reading
-> aid, not a grammar. Each name's specification defines the *whole*
-> construction: message formats, encodings, validation rules, and how the
-> components are combined. Two methods that share a word—say, `sha256`—may
-> use it in entirely different places. An implementation never assembles
-> behavior from name fragments, and `rsa-sha2-512` is not "RSA plus
-> whatever `sha2-512` means elsewhere".
-
-The subchapters explain each family:
-[AEAD and cipher modes](./crypto-symmetric.md),
-[X25519 and ECDH](./crypto-key-agreement.md#x25519),
-[hybrid KEMs](./crypto-post-quantum.md#hybrid-key-exchange-in-ssh),
-[RSA](./crypto-signatures.md#rsa), [ECDSA](./crypto-signatures.md#ecdsa),
-[Ed25519](./crypto-signatures.md#ed25519),
-[certificates](./crypto-signatures.md#certificates), and
-[hardware-backed keys](./crypto-signatures.md#hardware-backed-keys).
+> **Names are opaque identifiers.** The decomposition is a reading aid, not
+> a grammar. Each name's specification defines the whole construction, so
+> two methods that share a word such as `sha256` may use it in different
+> places.
 
 ## What "secure" means for a black box
 
-No practical primitive is unbreakable in principle. An attacker can always
-guess a key. *Computational security* means that every known attack costs
-so much work that it is infeasible, and the cost is summarized as a
-**security level** in bits: roughly, an *n*-bit level means that breaking
-the primitive takes about 2ⁿ basic operations.
-
-Primitives with very different key sizes can therefore offer comparable
-strength. The table follows the comparable-strength guidance in
-[NIST SP 800-57 Part 1](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final);
-the figures are classical (pre-quantum) estimates. NIST does not rate
-X25519, Ed25519, or ChaCha20; they appear at their conventional ratings.
+An attacker can always guess a key. *Computational security* means every
+known attack costs infeasibly much work, summarized as a **security level**:
+an *n*-bit level means breaking the primitive takes about 2ⁿ operations.
+The table follows the classical (pre-quantum) comparable-strength guidance
+in [NIST SP 800-57 Part 1](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final);
+X25519, Ed25519, and ChaCha20 appear at their conventional ratings.
 
 | Security level | Symmetric key | Hash (collision resistance) | Elliptic curve | RSA or finite-field DH |
 | --- | --- | --- | --- | --- |
@@ -253,11 +204,11 @@ X25519, Ed25519, or ChaCha20; they appear at their conventional ratings.
 | ≈ 192 bits | AES-192 | SHA-384 | P-384 | 7680-bit |
 | ≈ 256 bits | AES-256, ChaCha20 | SHA-512 | P-521 | 15360-bit |
 
-A connection is only as strong as its weakest necessary component. Pairing
-AES-256 with a 2048-bit DH group gives roughly 112-bit key establishment,
-not 256-bit security. Post-quantum changes the table: a large quantum
-computer would break the RSA, DH, and elliptic-curve columns outright,
-while symmetric keys and hashes mostly keep their strength. See
+A connection is only as strong as its weakest necessary component: AES-256
+with a 2048-bit DH group gives roughly 112-bit key establishment, not
+256-bit security. A large quantum computer would break the RSA, DH, and
+elliptic-curve columns outright, while symmetric keys and hashes mostly keep
+their strength; see
 [Why quantum computers matter](./crypto-post-quantum.md#why-quantum-computers-matter).
 
 <details>
@@ -265,29 +216,24 @@ while symmetric keys and hashes mostly keep their strength. See
 
 **Scale.** 2¹²⁸ ≈ 3.4 × 10³⁸. A machine performing 10¹⁸ operations per
 second—roughly an exascale supercomputer—would need about 1.08 × 10¹³
-years, some 780 times the age of the universe, to perform that many
-operations. A 128-bit level is not "barely safe"; it is chosen so that the
-attack cost is out of reach for any foreseeable classical attacker.
+years, some 780 times the age of the universe. A 128-bit level is chosen to
+be out of reach for any foreseeable classical attacker.
 
-**Why hash outputs are twice as long.** Finding *any* two inputs with the
-same n-bit digest (a collision) does not need 2ⁿ work. By the birthday
-paradox, after trying about 2^(n/2) random inputs a repeat becomes likely.
-So SHA-256 (n = 256) gives about 128-bit collision resistance, which is why
-it appears in the 128-bit row. The
-[hashes chapter](./crypto-hashes.md) works through the birthday bound.
+**Why hash outputs are twice as long.** A collision in an n-bit digest
+takes only about 2^(n/2) tries (the
+[birthday bound](./crypto-hashes.md#the-exchange-hash-commits-to-the-transcript)),
+so SHA-256 gives about 128-bit collision resistance.
 
 **Why RSA needs so many more bits than elliptic curves.** The best generic
 attack on an elliptic-curve group of size about 2ᵇ, Pollard's rho, needs
-about √(2ᵇ) = 2^(b/2) steps. A 256-bit curve therefore gives about 128-bit
-security. RSA and finite-field DH fall to the *number field sieve*, whose
-cost grows sub-exponentially in the key size. Its heuristic cost,
-ignoring lower-order terms, is
+about 2^(b/2) steps, so a 256-bit curve gives about 128-bit security. RSA
+and finite-field DH fall to the *number field sieve*, whose cost grows
+sub-exponentially in the key size. Its heuristic cost, ignoring lower-order
+terms, is
 
 ```text
 L(N) = exp( (64/9)^(1/3) · (ln N)^(1/3) · (ln ln N)^(2/3) )
 ```
-
-Evaluating that formula for a few modulus sizes gives:
 
 | Modulus bits | log₂ L(N) | NIST rating |
 | ---: | ---: | ---: |
@@ -297,11 +243,10 @@ Evaluating that formula for a few modulus sizes gives:
 | 7680 | ≈ 203 | 192 |
 | 15360 | ≈ 269 | 256 |
 
-The formula hides constant factors, so it overestimates; NIST's ratings are
-the calibrated values. The shape is the lesson: moving from 128-bit to
-192-bit security takes an RSA modulus from 3072 to 7680 bits, but an
-elliptic curve only from 256 to 384 bits, because every two extra curve bits
-add one bit of security.
+The formula ignores constant factors and overestimates; NIST's ratings are
+calibrated. The shape is the lesson: from 128-bit to 192-bit security, an
+RSA modulus grows from 3072 to 7680 bits but an elliptic curve only from 256
+to 384 bits.
 
 Learn more:
 
@@ -315,69 +260,51 @@ Learn more:
 ## Randomness
 
 Every secret in SSH starts as output from a cryptographically secure
-pseudo-random number generator (CSPRNG). As a black box:
+pseudo-random number generator (CSPRNG), usually provided by the operating
+system and seeded from hardware events and other entropy sources:
 
 ```text
 RANDOM(n) -> n bytes that an attacker cannot predict,
              even after seeing all earlier outputs
 ```
 
-The operating system usually provides this generator, seeded from hardware
-events and other entropy sources. SSH consumes its output in several places:
+Long-term host and user keys come from it, and so does much of each
+connection:
 
-```mermaid
-flowchart LR
-    CS["CSPRNG"] --> CK["KEXINIT cookie<br/>16 bytes per peer"]
-    CS --> EPH["Ephemeral DH / ECDH<br/>private values"]
-    CS --> KEM["KEM key generation<br/>and encapsulation"]
-    CS --> PAD["Packet padding bytes"]
-    CS --> NON["Per-signature nonces<br/>(ECDSA)"]
-    CS --> LT["Long-term key generation<br/>host and user keys"]
-```
-
-- The **`KEXINIT` cookie** is 16 random bytes. RFC 4253 states that its
-  purpose is to make it impossible for either side to fully determine the
-  keys and the session identifier; because both cookies enter the exchange
-  hash, each peer contributes randomness to `H`.
+- The **`KEXINIT` cookie** is 16 random bytes. RFC 4253 says it makes it
+  impossible for either side to fully determine the keys and the session
+  identifier: both cookies enter the exchange hash, so each peer contributes
+  randomness to `H`.
 - **Ephemeral private values** are the root of the shared secret. If they
   are predictable, a passive observer can compute `K` and read everything.
 - **KEM encapsulation** draws randomness to choose the encapsulated secret.
 - **Padding** should be random so that it does not leak structure.
-- **ECDSA signatures** need a fresh secret nonce for every signature. Ed25519
-  derives its nonce deterministically from the key and message, which removes
-  that particular dependency. See [ECDSA](./crypto-signatures.md#ecdsa).
+- **ECDSA signatures** need a fresh secret nonce each time; reusing one
+  reveals the private key. Ed25519 derives its nonce from the key and
+  message instead; see [ECDSA](./crypto-signatures.md#ecdsa).
 
-A bad generator does not produce errors. It produces keys that look normal
-and are silently guessable. Nothing in the protocol can detect this from
-the outside, which is why [RFC 4251, section 9.1](https://www.rfc-editor.org/rfc/rfc4251#section-9.1)
+A bad generator produces no errors, only keys that look normal and are
+silently guessable. The protocol cannot detect this from the outside, which
+is why [RFC 4251, section 9.1](https://www.rfc-editor.org/rfc/rfc4251#section-9.1)
 singles out random-number quality.
 
 <details>
 <summary>Go deeper: when randomness fails</summary>
 
-**Counting the real entropy.** A 256-bit key is only as strong as the
-number of states the generator could have been in when it produced the key.
-If the generator could only start in 2ˢ distinct states, an attacker
-enumerates those states and regenerates every possible key: the security
-level is s bits, whatever the key length.
+A key is only as strong as the number of states its generator could have
+been in. If the generator could start in only 2ˢ states, an attacker
+enumerates them and regenerates every possible key: the security level is s
+bits, whatever the key length.
 
 **Debian OpenSSL, 2008.** A change to Debian's OpenSSL package left the
-generator seeded essentially by the process ID alone. With process IDs from
-1 to 32,767, each architecture, key type, and key size could produce only
-32,767 distinct key pairs—about 2¹⁵, or 15 bits of security. Attackers
-simply generated all of them. Every affected SSH host and user key had to be
-regenerated, and because DSA signatures also consume per-signature
-randomness, even a well-generated DSA key was considered compromised if it
-had been *used* on an affected machine. See
+generator seeded essentially by the process ID alone. Each architecture, key
+type, and key size could produce only 32,767 distinct key pairs—about 15
+bits of security—and attackers generated all of them. Every affected SSH
+host and user key had to be regenerated. Because DSA signatures also consume
+per-signature randomness, even a well-generated DSA key counted as
+compromised if it had been *used* on an affected machine. See
 [Debian Security Advisory DSA-1571](https://www.debian.org/security/2008/dsa-1571)
 and the [Debian wiki summary](https://wiki.debian.org/SSLkeys).
-
-**Nonce reuse in ECDSA.** An ECDSA signature involves a secret per-signature
-number k. Two signatures made with the same k and different messages give
-two linear equations in two unknowns—k and the private key—so anyone
-holding the signatures can solve for the private key. A slightly biased k
-leaks the key more slowly across many signatures. The
-[signatures chapter](./crypto-signatures.md#ecdsa) shows the algebra.
 
 Learn more:
 
@@ -387,54 +314,12 @@ Learn more:
 
 </details>
 
-## Four kinds of key to keep separate
-
-The word "key" appears everywhere in SSH. Four kinds have different
-lifetimes, owners, and jobs:
-
-| Material | Lifetime | Main purpose |
-| --- | --- | --- |
-| Server host key | long-lived | identify the server and sign key exchange |
-| User authentication key | long-lived | prove the user's identity to the server |
-| Ephemeral KEX key/value | one exchange | establish a fresh shared secret |
-| Traffic key and IV | until rekey | protect packets in exactly one direction |
-
-```mermaid
-flowchart LR
-    HK["Host key<br/>(years)"] -->|"signs"| H["Exchange hash H"]
-    EK["Ephemeral KEX keys<br/>(one exchange)"] -->|"produce"| K["Shared secret K"]
-    K --> TK["Traffic keys<br/>(until rekey)"]
-    H --> TK
-    UK["User key<br/>(years)"] -->|"signs"| SID["session_id ‖ request"]
-```
-
-Forward secrecy comes from key exchange with fresh ephemeral secrets. Those
-secrets must also be erased after key derivation. Later theft of the host
-private key should then not reveal old traffic, because the host key only
-*signed* the exchange; it never encrypted the secret. This property does not
-help if an endpoint, random generator, or plaintext was already compromised.
-See [Forward secrecy](./crypto-key-agreement.md#forward-secrecy).
-
-## Protocol boundary
-
-SSH specifies how these primitives are composed: which transcript is hashed,
-which identity signs it, how keys are separated by purpose and direction, and
-when those keys become active. The primitive's internal mathematics remains a
-separate concern.
-
-Real SSH software relies on reviewed cryptographic implementations for
-scalar arithmetic, signature details, public-value validation, and
-constant-time operation—code whose running time and memory access do not
-depend on secret values. These properties are easy to lose in a
-hand-written implementation and hard to test for. The *Go deeper* sections
-in this part of the guide explain why the primitives work; they are not
-recipes for implementing them.
-
 ## Check your understanding
 
 1. Which two components together supply server authenticity, and which of
    them is not cryptography?
-2. Why is a hash alone not enough to authenticate the exchange transcript?
+2. A design uses a plain hash of each packet to detect tampering. Which box
+   should it use instead, and why?
 3. What does the `sha256` in `curve25519-sha256` select, and why can you not
    infer the same role for `sha256` in another name?
 4. A connection uses `aes256-gcm@openssh.com` and
@@ -451,19 +336,18 @@ recipes for implementing them.
 1. The host-key signature over the exchange hash, and the client's trust
    policy (known hosts or a trusted CA). The trust policy is a local
    decision, not a cryptographic computation.
-2. Anyone can compute a hash of public bytes. An attacker who rewrites the
-   transcript can recompute its hash. A signature by a trusted host key over
-   that hash is what an attacker cannot forge.
+2. A MAC (or an AEAD tag), keyed per direction. A hash has no secret, so an
+   attacker who modifies a packet can recompute its hash.
 3. It selects SHA-256 as the method's `HASH`, used for the exchange hash and
    key derivation. Names are opaque identifiers; each specification defines
-   what its components mean, so the same word can play a different role
+   what its parts mean, so the same word can play a different role
    elsewhere.
 4. About 112 bits. The 2048-bit group establishes the key, and it is the
    weakest necessary component.
 5. Ephemeral private values, and therefore `K`, become guessable. An observer
    can recompute the traffic keys. Every verification still succeeds because
    the protocol runs correctly with guessable inputs.
-6. Only the traffic keys. The host key is long-lived and `session_id` stays
+6. Only the traffic keys. The host key is long-lived, and `session_id` stays
    equal to the first exchange hash for the whole connection.
 
 </details>
@@ -473,9 +357,10 @@ recipes for implementing them.
 - [RFC 4253 — SSH Transport Layer Protocol](https://www.rfc-editor.org/rfc/rfc4253),
   section 7 (key exchange and key derivation).
 - [RFC 4251 — SSH Protocol Architecture](https://www.rfc-editor.org/rfc/rfc4251),
-  section 9 (security considerations).
+  sections 6 (algorithm naming) and 9 (security considerations).
 - [RFC 5116 — An Interface and Algorithms for Authenticated Encryption](https://www.rfc-editor.org/rfc/rfc5116).
 - [RFC 9142 — Key Exchange (KEX) Method Updates and Recommendations for SSH](https://www.rfc-editor.org/rfc/rfc9142).
+- [RFC 4086 — Randomness Requirements for Security](https://www.rfc-editor.org/rfc/rfc4086).
 - [NIST SP 800-57 Part 1 Rev. 5 — Recommendation for Key Management](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final).
 - Dan Boneh and Victor Shoup,
   [A Graduate Course in Applied Cryptography](https://toc.cryptobook.us/)

@@ -21,6 +21,7 @@ find the authoritative field layout or behavior behind a guide explanation.
 
 ## Algorithms and extensions used in this guide
 
+- [RFC 4335 — Session Channel Break Extension](https://www.rfc-editor.org/rfc/rfc4335)
 - [RFC 4419 — Diffie-Hellman Group Exchange](https://www.rfc-editor.org/rfc/rfc4419)
 - [RFC 5656 — Elliptic Curve Algorithms for SSH](https://www.rfc-editor.org/rfc/rfc5656)
 - [RFC 5647 — AES-GCM for SSH](https://www.rfc-editor.org/rfc/rfc5647)
@@ -38,11 +39,20 @@ find the authoritative field layout or behavior behind a guide explanation.
 
 ## Authentication and key representation
 
+- [RFC 4255 — SSHFP: Host-Key Fingerprints in DNS](https://www.rfc-editor.org/rfc/rfc4255),
+  extended by [RFC 6594](https://www.rfc-editor.org/rfc/rfc6594) (SHA-256,
+  ECDSA) and [RFC 7479](https://www.rfc-editor.org/rfc/rfc7479) (Ed25519).
 - [RFC 4256 — Keyboard-Interactive Authentication](https://www.rfc-editor.org/rfc/rfc4256)
+- [RFC 4462 — GSS-API Authentication and Key Exchange](https://www.rfc-editor.org/rfc/rfc4462):
+  the `gssapi-with-mic` user-authentication method.
 - [RFC 4716 — SSH Public Key File Format](https://www.rfc-editor.org/rfc/rfc4716)
 - [RFC 6187 — X.509v3 Certificates for SSH](https://www.rfc-editor.org/rfc/rfc6187)
 - [RFC 9987 — SSH Agent Protocol](https://www.rfc-editor.org/rfc/rfc9987):
-  the protocol behind `ssh-agent` and agent forwarding.
+  the protocol behind `ssh-agent`, including the standard `agent-req` and
+  `agent-connect` forwarding names alongside OpenSSH's `auth-agent@openssh.com`.
+- [OpenSSH `PROTOCOL.agent`](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.agent)
+  and [SSH agent restriction](https://www.openssh.com/agent-restrict.html):
+  `session-bind@openssh.com` and destination-constrained agent keys.
 
 ## Deployed extensions and draft specifications
 
@@ -63,6 +73,15 @@ find the authoritative field layout or behavior behind a guide explanation.
   documents the deployed negotiation rules that differ from RFC 5647.
 - [Host-key update draft](https://datatracker.ietf.org/doc/draft-ietf-sshm-hostkey-update/):
   learning replacement host keys through an authenticated connection.
+- [SSH File Transfer Protocol, draft-ietf-secsh-filexfer-02](https://www.openssh.com/txt/draft-ietf-secsh-filexfer-02.txt):
+  SFTP version 3, the subsystem OpenSSH implements.
+- [X11 SECURITY extension](https://xorg.freedesktop.org/archive/X11R7.7/doc/xextproto/security.html):
+  the untrusted-client restrictions behind OpenSSH's default X11 forwarding.
+- [OpenSSH release notes](https://www.openssh.com/releasenotes.html) and
+  [post-quantum cryptography page](https://www.openssh.com/pq.html): when
+  algorithms, defaults, and warnings changed.
+- [Terrapin attack paper](https://arxiv.org/abs/2312.12422) (CVE-2023-48795):
+  the prefix-truncation attack that motivated strict KEX.
 
 ## Cryptographic primitives
 
@@ -92,6 +111,8 @@ mathematics and test vectors.
   ECDSA, EdDSA, and RSA signatures.
 - [RFC 8017 — PKCS #1 v2.2](https://www.rfc-editor.org/rfc/rfc8017): RSA and
   the PKCS #1 v1.5 signature encoding used by `rsa-sha2-*`.
+- [NIST SP 800-57 Part 1 Rev. 5 — Recommendation for Key Management](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final):
+  comparable security strengths of symmetric and public-key algorithms.
 - [RFC 6979 — Deterministic DSA and ECDSA](https://www.rfc-editor.org/rfc/rfc6979):
   deriving the per-signature nonce without a random generator.
 - [RFC 8032 — Edwards-Curve Digital Signature Algorithm](https://www.rfc-editor.org/rfc/rfc8032):

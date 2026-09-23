@@ -14,10 +14,10 @@ failure. In SSH, an AEAD cipher replaces the separately negotiated MAC. See
 deployed in SSH as `aes128-gcm@openssh.com` and `aes256-gcm@openssh.com`. See
 [AES-GCM](./crypto-symmetric.md#aes-gcm).
 
-**Agent forwarding** — Giving a remote host access to the client's signing
-agent over a channel. The remote host can request signatures but does not
-receive private-key bytes. See
-[Related channels are separate protocols](./forwarding.md#related-channels-are-separate-protocols).
+**Agent forwarding** — Letting programs on the server use the client's
+signing agent over agent channels, enabled by a session request. The remote
+host gets a signing oracle, not private-key bytes. See
+[Agent forwarding](./other-channels.md#agent-forwarding).
 
 **Application string** — The `ssh:`-prefixed name, usually just `ssh:`, that
 an `sk-` key is created for. It is part of the public key and is hashed into
@@ -30,6 +30,11 @@ OpenSSH discards it unless asked to save it. See
 [Enrollment](./fido-security-keys.md#enrollment).
 
 ## B
+
+**Banner** — `SSH_MSG_USERAUTH_BANNER`: server text, such as a legal notice,
+shown before authentication completes. It needs no reply and is untrusted
+display text. See
+[Banners and other server text](./user-authentication.md#banners-and-other-server-text).
 
 **Binary packet** — The SSH transport's framing unit: a length, a padding
 length, one message payload, random padding, and, once keys are active, a MAC
@@ -76,12 +81,22 @@ Because the payload is hashed into `H`, the cookies ensure neither side alone
 can fully determine the keys and session identifier. See
 [`SSH_MSG_KEXINIT` carries proposals](./version-and-negotiation.md#ssh_msg_kexinit-carries-proposals).
 
+**credProtect** — A FIDO 2.1 extension that makes an authenticator require
+user verification before a credential can be discovered or, at its strictest
+level, used. OpenSSH sets it for resident and `verify-required` keys. See
+[Resident and non-resident keys](./fido-security-keys.md#resident-and-non-resident-keys).
+
 **CSPRNG** — Cryptographically secure pseudorandom number generator: a source
 of bytes an attacker cannot predict. SSH needs one for cookies, ephemeral
 private values, padding, and some signatures. See
 [Randomness](./cryptography-primer.md#randomness).
 
 ## D
+
+**Destination constraint** — An `ssh-add -h` restriction naming the hosts, and
+forwarding hops, where an agent key may be used. The agent learns each hop's
+host key through the `session-bind@openssh.com` extension. See
+[Narrowing the delegation](./other-channels.md#narrowing-the-delegation).
 
 **Diffie–Hellman (DH)** — Key agreement in which each side publishes a value
 derived from a private secret, and both compute the same shared secret that an
@@ -91,6 +106,10 @@ observer cannot. See
 **`direct-tcpip`** — The channel type a client opens to ask the server to
 connect to a TCP target, used by local and dynamic forwarding. See
 [Direct TCP channels](./forwarding.md#direct-tcp-channels).
+
+**Disconnect reason code** — The number in `SSH_MSG_DISCONNECT`, registered in
+RFC 4250. It is coarse evidence; the description text usually says more. See
+[Read disconnects in context](./testing-and-debugging.md#read-disconnects-in-context).
 
 **Discrete logarithm** — The problem of recovering a secret exponent `x` from
 `g^x` in a group. Its presumed difficulty underlies classical Diffie–Hellman
@@ -135,13 +154,13 @@ identification strings, both `KEXINIT` payloads, the host key, the ephemeral
 values, and the shared secret. The server signs it. See
 [The exchange hash](./key-exchange.md#the-exchange-hash-authenticate-the-whole-decision).
 
-**`EXT_INFO`** — The RFC 8308 message that carries extension name-value pairs,
-such as `server-sig-algs`, after `NEWKEYS`. See
-[Extension negotiation](./version-and-negotiation.md#extension-negotiation-with-ext-info-).
-
 **Extended data** — Channel data tagged with a type number; in sessions, type
 1 carries standard error. It shares the channel's window with ordinary data.
 See [Data and extended data](./sessions.md#data-and-extended-data).
+
+**`EXT_INFO`** — The RFC 8308 message that carries extension name-value pairs,
+such as `server-sig-algs`, after `NEWKEYS`. See
+[Extension negotiation](./version-and-negotiation.md#extension-negotiation-with-ext-info-).
 
 ## F
 
@@ -175,6 +194,11 @@ bit strength of symmetric keys. It weakens, but does not break, AES and
 SHA-2. See
 [Why quantum computers matter](./crypto-post-quantum.md#why-quantum-computers-matter).
 
+**`gssapi-with-mic`** — The RFC 4462 user-authentication method that runs a
+GSS-API mechanism, usually Kerberos, and ends with an integrity check over
+session-bound data. See
+[Host-based and GSS-API authentication](./user-authentication.md#host-based-and-gss-api-authentication).
+
 ## H
 
 **Harvest now, decrypt later** — Recording encrypted traffic today in the hope
@@ -195,14 +219,26 @@ hashes for `H`, key derivation, and MACs. See
 exchange hash; the client decides whether its public half is trusted for the
 destination. See [Server authentication](./server-authentication.md).
 
+**Host-based authentication** — The `hostbased` method: the client host signs
+with its own host key, and the server trusts that host to vouch for the local
+user name. See
+[Host-based and GSS-API authentication](./user-authentication.md#host-based-and-gss-api-authentication).
+
 **Host-bound authentication** — OpenSSH's
 `publickey-hostbound-v00@openssh.com` method, which adds the server's host key
 to the signed user-authentication data so an agent can restrict where a key
 is used. See
 [Host-bound public-key authentication](./user-authentication.md#host-bound-public-key-authentication).
 
+**Host-key rotation** — OpenSSH's `hostkeys-00@openssh.com` extension: after
+user authentication the server lists all its host keys, and the client records
+new ones only after the server proves possession of each. Controlled by
+`UpdateHostKeys`. See
+[Host-key rotation](./server-authentication.md#host-key-rotation).
+
 **Hybrid key exchange** — A key exchange that combines a post-quantum KEM with
-classical ECDH, so the result stays secret if either component holds. See
+classical ECDH, so the result stays secret if either component holds. RFC
+10042 calls this a PQ/T hybrid. See
 [Hybrid key exchange in SSH](./crypto-post-quantum.md#hybrid-key-exchange-in-ssh)
 and [Hybrid post-quantum exchange](./key-exchange-methods.md#hybrid-post-quantum-exchange).
 
@@ -211,6 +247,16 @@ and [Hybrid post-quantum exchange](./key-exchange-methods.md#hybrid-post-quantum
 **Identification string** — The `SSH-2.0-…` line each side sends first,
 without its CR LF. It is later hashed into `H`. See
 [The identification line](./identification.md#the-identification-line).
+
+**Implicit rejection** — ML-KEM's response to a malformed ciphertext: it
+returns a pseudorandom secret instead of an error, so the key exchange simply
+fails later. See
+[ML-KEM and Streamlined NTRU Prime](./crypto-post-quantum.md#ml-kem-and-streamlined-ntru-prime).
+
+**Invalid-curve attack** — Sending a point that is not on the agreed curve so
+the victim computes in a weak group and leaks its secret. Point validation, or
+a curve design such as X25519's, prevents it. See
+[Elliptic curves](./crypto-key-agreement.md#elliptic-curves).
 
 ## K
 
@@ -243,6 +289,10 @@ sends arbitrary prompts and the client returns answers. See
 **`known_hosts`** — OpenSSH's local database mapping host names to trusted
 host keys or host CAs. See
 [The `known_hosts` database](./server-authentication.md#the-known_hosts-database).
+
+**KRL** — Key revocation list: OpenSSH's compact format for revoking keys,
+certificate serial numbers, or key IDs, loaded with `RevokedKeys` or
+`RevokedHostKeys`. See [Certificates](./crypto-signatures.md#certificates).
 
 ## L
 
@@ -292,6 +342,11 @@ method succeeded but the server requires another. See
 polynomial at a secret point; SSH's ChaCha20-Poly1305 derives a fresh
 Poly1305 key for every packet. See
 [ChaCha20-Poly1305](./crypto-symmetric.md#chacha20-poly1305).
+
+**Pre-identification lines** — Text lines a server may send before its `SSH-`
+line. They are unauthenticated, not part of the exchange hash, and distinct
+from the authentication banner. See
+[Server lines before identification](./identification.md#server-lines-before-identification).
 
 **Principal** — A name, such as a user or host name, that a certificate is
 valid for. See [User certificates](./user-authentication.md#user-certificates).
@@ -351,6 +406,19 @@ signatures on a large enough quantum computer. See
 with the public key can verify over a specific message. See
 [Signatures as a black box](./crypto-signatures.md#signatures-as-a-black-box).
 
+**Signing oracle** — Anything that returns signatures on caller-chosen data
+without revealing the key, such as an agent, a hardware token, or a forwarded
+agent. See [Hardware-backed keys](./crypto-signatures.md#hardware-backed-keys).
+
+**SSHFP** — A DNS record publishing a digest of an SSH host key under the
+host's name. A client may trust it only when DNSSEC authenticates the answer.
+See [DNS fingerprints (SSHFP)](./server-authentication.md#dns-fingerprints-sshfp).
+
+**Streamlocal forwarding** — OpenSSH's forwarding of Unix-domain sockets, using
+the `direct-streamlocal@openssh.com` and `forwarded-streamlocal@openssh.com`
+channel types. See
+[Unix-domain socket forwarding](./other-channels.md#unix-domain-socket-forwarding).
+
 **Strict KEX** — An extension that forbids unexpected messages during the
 initial exchange and resets sequence numbers at each `NEWKEYS`, closing the
 Terrapin gap. See
@@ -360,6 +428,10 @@ Terrapin gap. See
 instead of a shell or command. See [Subsystems](./sessions.md#subsystems).
 
 ## T
+
+**Terminal modes** — The opcode-and-value list in `pty-req` that sets the
+remote terminal's line discipline, such as echo and the interrupt character.
+See [A PTY changes the byte-stream environment](./sessions.md#a-pty-changes-the-byte-stream-environment).
 
 **Terrapin** — A prefix-truncation attack published in 2023
 (CVE-2023-48795) that manipulated sequence numbers during the handshake to
@@ -390,6 +462,12 @@ grants for channel data. See
 [Windows and flow control](./channels.md#windows-and-flow-control).
 
 ## X
+
+**X11 forwarding** — Carrying X11 connections from remote programs to the
+client's display in `x11` channels, enabled by `x11-req`. The client replaces
+a fake authentication cookie with the real one; OpenSSH's default untrusted
+mode limits what remote clients can do. See
+[X11 forwarding](./other-channels.md#x11-forwarding).
 
 **X25519** — Diffie–Hellman on Curve25519 with 32-byte public values, used by
 `curve25519-sha256` and the `x25519` hybrids. See
