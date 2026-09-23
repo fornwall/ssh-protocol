@@ -21,8 +21,8 @@
   - [Hashes, MACs, and key derivation](./crypto-hashes.md)
   - [Symmetric encryption and packet protection](./crypto-symmetric.md)
   - [Key agreement: Diffie–Hellman and elliptic curves](./crypto-key-agreement.md)
-  - [Digital signatures](./crypto-signatures.md)
   - [Post-quantum key exchange](./crypto-post-quantum.md)
+  - [Digital signatures](./crypto-signatures.md)
 
 # Key exchange and server authentication
 

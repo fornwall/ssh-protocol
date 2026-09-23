@@ -201,6 +201,47 @@ information and the `ssh-userauth` service request follow under the new keys
 ([RFC 4253, Section 7.3](https://www.rfc-editor.org/rfc/rfc4253.html#section-7.3);
 [RFC 8308](https://www.rfc-editor.org/rfc/rfc8308.html)).
 
+## Putting it together: one modern connection
+
+The following initial exchange uses the algorithms a current OpenSSH client
+and server select by default: `mlkem768x25519-sha256` key exchange, an
+`ssh-ed25519` host key, and `chacha20-poly1305@openssh.com` in both
+directions.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+    C->>S: Identification line
+    S->>C: Identification line
+    C->>S: KEXINIT with random cookie and proposals
+    S->>C: KEXINIT with random cookie and proposals
+    Note over C,S: Both select mlkem768x25519-sha256,<br/>ssh-ed25519, chacha20-poly1305@openssh.com
+    Note over C: Generate fresh ML-KEM-768<br/>and X25519 key pairs
+    C->>S: KEX_HYBRID_INIT: ML-KEM public key || X25519 public key
+    Note over S: Encapsulate: ciphertext and K_PQ<br/>X25519: K_CL<br/>K = SHA-256(K_PQ || K_CL)<br/>Compute H and sign it with the Ed25519 host key
+    S->>C: KEX_HYBRID_REPLY: K_S, ciphertext || X25519 public key, signature
+    Note over C: Decapsulate: K_PQ. X25519: K_CL<br/>Compute K and H, verify the signature,<br/>check K_S against the trust store
+    C->>S: NEWKEYS
+    S->>C: NEWKEYS
+    Note over C,S: Keys derived from K, H, and session_id = H<br/>ChaCha20-Poly1305 now protects each direction
+    C->>S: SERVICE_REQUEST ssh-userauth, encrypted and authenticated
+```
+
+Each step has one cryptographic job:
+
+| Step | Primitive | Explained in |
+| --- | --- | --- |
+| Cookies and ephemeral private values | Secure random generation | [Randomness](./cryptography-primer.md#randomness) |
+| `KEX_HYBRID_INIT` and `KEX_HYBRID_REPLY` | ML-KEM-768 encapsulation plus X25519 agreement | [Hybrid key exchange in SSH](./crypto-post-quantum.md#hybrid-key-exchange-in-ssh), [X25519](./crypto-key-agreement.md#x25519) |
+| Combining secrets and computing `H` | SHA-256 | [Hashes, MACs, and key derivation](./crypto-hashes.md) |
+| Host-key proof | Ed25519 signature over `H` | [Ed25519](./crypto-signatures.md#ed25519) |
+| Traffic keys | SSH key derivation with SHA-256 | [Key derivation in SSH](./crypto-hashes.md#key-derivation-in-ssh) |
+| Packet protection | ChaCha20-Poly1305 AEAD | [ChaCha20-Poly1305](./crypto-symmetric.md#chacha20-poly1305) |
+
+The trust decision about `K_S` has no primitive of its own: it is local
+policy, covered in [Server authentication](./server-authentication.md).
+
 ## Rekeying a live connection
 
 Either endpoint can run a new key exchange at any time by sending a fresh
@@ -242,47 +283,6 @@ sequenceDiagram
     S->>C: NEWKEYS under old S→C keys
     Note over C,S: Resume with fresh directional keys
 ```
-
-## Putting it together: one modern connection
-
-The following initial exchange uses the algorithms a current OpenSSH client
-and server select by default: `mlkem768x25519-sha256` key exchange, an
-`ssh-ed25519` host key, and `chacha20-poly1305@openssh.com` in both
-directions.
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    C->>S: Identification line
-    S->>C: Identification line
-    C->>S: KEXINIT with random cookie and proposals
-    S->>C: KEXINIT with random cookie and proposals
-    Note over C,S: Both select mlkem768x25519-sha256,<br/>ssh-ed25519, chacha20-poly1305@openssh.com
-    Note over C: Generate fresh ML-KEM-768<br/>and X25519 key pairs
-    C->>S: KEX_HYBRID_INIT: ML-KEM public key || X25519 public key
-    Note over S: Encapsulate: ciphertext and K_PQ<br/>X25519: K_CL<br/>K = SHA-256(K_PQ || K_CL)<br/>Compute H and sign it with the Ed25519 host key
-    S->>C: KEX_HYBRID_REPLY: K_S, ciphertext || X25519 public key, signature
-    Note over C: Decapsulate: K_PQ. X25519: K_CL<br/>Compute K and H, verify the signature,<br/>check K_S against the trust store
-    C->>S: NEWKEYS
-    S->>C: NEWKEYS
-    Note over C,S: Keys derived from K, H, and session_id = H<br/>ChaCha20-Poly1305 now protects each direction
-    C->>S: SERVICE_REQUEST ssh-userauth, encrypted and authenticated
-```
-
-Each step has one cryptographic job:
-
-| Step | Primitive | Explained in |
-| --- | --- | --- |
-| Cookies and ephemeral private values | Secure random generation | [Randomness](./cryptography-primer.md#randomness) |
-| `KEX_HYBRID_INIT` and `KEX_HYBRID_REPLY` | ML-KEM-768 encapsulation plus X25519 agreement | [Hybrid key exchange in SSH](./crypto-post-quantum.md#hybrid-key-exchange-in-ssh), [X25519](./crypto-key-agreement.md#x25519) |
-| Combining secrets and computing `H` | SHA-256 | [Hashes, MACs, and key derivation](./crypto-hashes.md) |
-| Host-key proof | Ed25519 signature over `H` | [Ed25519](./crypto-signatures.md#ed25519) |
-| Traffic keys | SSH key derivation with SHA-256 | [Key derivation in SSH](./crypto-hashes.md#key-derivation-in-ssh) |
-| Packet protection | ChaCha20-Poly1305 AEAD | [ChaCha20-Poly1305](./crypto-symmetric.md#chacha20-poly1305) |
-
-The trust decision about `K_S` has no primitive of its own: it is local
-policy, covered in [Server authentication](./server-authentication.md).
 
 ## Security invariants
 

@@ -10,7 +10,7 @@ This project is an mdBook guide about SSH, published at <https://ssh.fornwall.ne
     agent, X11, and Unix-socket forwarding);
   - a separate "Cryptographic building blocks" part: `cryptography-primer.md`
     plus nested `crypto-*.md` chapters (hashes/MACs/KDF, symmetric ciphers, key
-    agreement, signatures, post-quantum);
+    agreement, post-quantum, signatures);
   - `fido-security-keys.md`, which also covers OpenSSH and `ykman` setup;
   - `glossary.md` and `reference-map.md`, which should be updated when terms or
     references are added.

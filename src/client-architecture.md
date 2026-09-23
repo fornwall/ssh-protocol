@@ -37,6 +37,19 @@ succeeds and restricts rekeying further when delayed compression is
 negotiated. See
 [compression transitions](./binary-packets.md#compression-changes-payloads-not-channels).
 
+## Four distinct questions
+
+An SSH trace mentions several names and keys that answer different questions:
+
+1. The network address says where bytes were delivered.
+2. The host-key trust decision says which server received them.
+3. User authentication decides whether the client may act as an account on
+   that server.
+4. A channel request asks which program or forwarding operation that
+   connection may start.
+
+Success at one boundary does not imply success at the next.
+
 ## Client and server roles are asymmetric
 
 Both sides propose algorithms and contribute ephemeral key material, but their
@@ -113,19 +126,6 @@ The current state also decides what a message number means. Message number 60
 can be a public-key query acceptance, a password-change request, or an
 interactive prompt; only the active authentication method tells them apart.
 
-## Four distinct questions
-
-An SSH trace mentions several names and keys that answer different questions:
-
-1. The network address says where bytes were delivered.
-2. The host-key trust decision says which server received them.
-3. User authentication decides whether the client may act as an account on
-   that server.
-4. A channel request asks which program or forwarding operation that
-   connection may start.
-
-Success at one boundary does not imply success at the next.
-
 ## Follow the unit in motion
 
 SSH changes its data unit as the conversation progresses: identification lines
@@ -144,14 +144,14 @@ behaves as it does.
 
 1. Why does the transport layer remain active after user authentication
    starts?
-2. Why can sending and receiving switch keys at different moments?
-3. Why does rekeying not authenticate the user again?
-4. The client calls a session channel 0, and the server calls it channel 5.
-   Which number does each side put in the channel messages it sends?
-5. Why can message number 60 not be decoded without authentication-method
-   state?
-6. A server's host key is trusted and user authentication succeeds, but the
+2. Why does rekeying not authenticate the user again?
+3. A server's host key is trusted and user authentication succeeds, but the
    server refuses an `exec` request. Which of the four questions failed?
+4. Why can sending and receiving switch keys at different moments?
+5. The client calls a session channel 0, and the server calls it channel 5.
+   Which number does each side put in the channel messages it sends?
+6. Why can message number 60 not be decoded without authentication-method
+   state?
 
 <details>
 <summary>Answers</summary>
@@ -159,19 +159,19 @@ behaves as it does.
 1. Every later message still travels in transport packets. The transport
    provides encryption, integrity, sequence numbers, rekeying, and disconnect
    handling for authentication and connection traffic alike.
-2. Each direction switches at its own `NEWKEYS`: a peer changes sending keys
-   after sending `NEWKEYS` and receiving keys after receiving the peer's. The
-   two messages can cross in flight.
-3. Rekeying replaces traffic keys underneath the existing session. User
+2. Rekeying replaces traffic keys underneath the existing session. User
    authentication belongs to a higher layer and remains valid; the session
    identifier from the first exchange does not change.
-4. Messages carry the recipient's number: the client sends 5 and the server
+3. The fourth: the authenticated connection may not start that program.
+   Server identity and user identity were both established.
+4. Each direction switches at its own `NEWKEYS`: a peer changes sending keys
+   after sending `NEWKEYS` and receiving keys after receiving the peer's. The
+   two messages can cross in flight.
+5. Messages carry the recipient's number: the client sends 5 and the server
    sends 0. Each number means something only to the peer that allocated it.
-5. Numbers 60–79 are method-specific: 60 is `USERAUTH_PK_OK` under
+6. Numbers 60–79 are method-specific: 60 is `USERAUTH_PK_OK` under
    `publickey`, `USERAUTH_PASSWD_CHANGEREQ` under `password`, and
    `USERAUTH_INFO_REQUEST` under `keyboard-interactive`.
-6. The fourth: the authenticated connection may not start that program.
-   Server identity and user identity were both established.
 
 </details>
 

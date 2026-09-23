@@ -173,37 +173,6 @@ Request a reply whenever success matters. A client that sends `exec` without
 one and treats incoming bytes as command output cannot tell refusal from
 delayed output or a later close.
 
-## Keepalives and evidence of liveness
-
-An idle connection can be healthy: SSH needs no continuous traffic. To detect
-an unresponsive peer, a client sends a protected request that requires a
-reply. OpenSSH's server-alive mechanism sends the global request
-`keepalive@openssh.com` with `want_reply = true`; see its
-[client implementation](https://github.com/openssh/openssh-portable/blob/master/clientloop.c).
-
-A peer that does not recognize the request answers
-`SSH_MSG_REQUEST_FAILURE`. That failure is still a protected reply, so it
-proves the peer processed the request even though the operation failed. Its
-position in the reply order identifies which request it answers.
-
-| Observation | What it establishes |
-| --- | --- |
-| A local write succeeds | The local system accepted bytes for sending. |
-| A TCP acknowledgement arrives | TCP received stream bytes; no SSH authentication or application processing is implied. |
-| A protected SSH request receives its reply | The SSH peer processed that request. |
-| A command produces output or an exit report | That channel has application progress or a result. |
-
-`SSH_MSG_IGNORE` requests no reply, so it cannot show that the peer is
-responsive. A global keepalive does not show that a shell, forwarded target,
-or other channel is making progress either. It consumes no channel window,
-though TCP stalls and rekeying can still delay it.
-
-OpenSSH exposes this policy as `ServerAliveInterval` and
-`ServerAliveCountMax`, separately from `TCPKeepAlive`; see
-[`ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5#ServerAliveInterval).
-A timeout shows only that the reply did not arrive in time; it cannot
-distinguish a failed server from a broken network path.
-
 ## EOF and CLOSE
 
 `SSH_MSG_CHANNEL_EOF` means “I will send no more data in this direction.” It is
@@ -238,6 +207,37 @@ while keeping the channel open. OpenSSH adds the channel request
 `eow@openssh.com` (end of write) between OpenSSH peers for that purpose; see
 the [OpenSSH protocol extensions](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL).
 
+## Keepalives and evidence of liveness
+
+An idle connection can be healthy: SSH needs no continuous traffic. To detect
+an unresponsive peer, a client sends a protected request that requires a
+reply. OpenSSH's server-alive mechanism sends the global request
+`keepalive@openssh.com` with `want_reply = true`; see its
+[client implementation](https://github.com/openssh/openssh-portable/blob/master/clientloop.c).
+
+A peer that does not recognize the request answers
+`SSH_MSG_REQUEST_FAILURE`. That failure is still a protected reply, so it
+proves the peer processed the request even though the operation failed. Its
+position in the reply order identifies which request it answers.
+
+| Observation | What it establishes |
+| --- | --- |
+| A local write succeeds | The local system accepted bytes for sending. |
+| A TCP acknowledgement arrives | TCP received stream bytes; no SSH authentication or application processing is implied. |
+| A protected SSH request receives its reply | The SSH peer processed that request. |
+| A command produces output or an exit report | That channel has application progress or a result. |
+
+`SSH_MSG_IGNORE` requests no reply, so it cannot show that the peer is
+responsive. A global keepalive does not show that a shell, forwarded target,
+or other channel is making progress either. It consumes no channel window,
+though TCP stalls and rekeying can still delay it.
+
+OpenSSH exposes this policy as `ServerAliveInterval` and
+`ServerAliveCountMax`, separately from `TCPKeepAlive`; see
+[`ssh_config(5)`](https://man.archlinux.org/man/ssh_config.5#ServerAliveInterval).
+A timeout shows only that the reply did not arrive in time; it cannot
+distinguish a failed server from a broken network path.
+
 ## Lab: simulate two channels
 
 Open two channels on paper, giving the client and server different local IDs
@@ -261,8 +261,8 @@ credit untouched, though a shared TCP stall could still delay both.
    still send on it?
 3. Why can buffering stderr without reading it stall stdout?
 4. How does a client know which `CHANNEL_SUCCESS` answers which request?
-5. A keepalive gets `REQUEST_FAILURE`. Is the peer alive?
-6. After sending CLOSE, may the client reuse the channel number at once?
+5. After sending CLOSE, may the client reuse the channel number at once?
+6. A keepalive gets `REQUEST_FAILURE`. Is the peer alive?
 
 <details>
 <summary>Answers</summary>
@@ -276,10 +276,10 @@ credit untouched, though a shared TCP stall could still delay both.
    client from replenishing it, so the server eventually cannot send either.
 4. By order. Replies on one channel follow that channel's request order;
    replies carry no request identifier.
-5. Yes. The failure is a protected reply, so the peer processed the request,
-   although that says nothing about progress on any channel.
-6. No. It must also receive the peer's CLOSE; only then is the channel closed
+5. No. It must also receive the peer's CLOSE; only then is the channel closed
    for the client.
+6. Yes. The failure is a protected reply, so the peer processed the request,
+   although that says nothing about progress on any channel.
 
 </details>
 

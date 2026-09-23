@@ -51,6 +51,36 @@ signature proves nothing about the current peer; a valid signature from an
 untrusted key proves control of that key, not the server's identity. Only
 when both succeed should the client start user authentication.
 
+## Fingerprints and key formats
+
+A [fingerprint](./crypto-hashes.md#fingerprints) is a short digest of a public
+key blob. OpenSSH's default form, `SHA256:` followed by Base64, names the hash
+and encodes its output. It is convenient for comparing keys over a human
+channel, but it is not an identity by itself: the trusted statement must bind
+it to a hostname or host role.
+
+Compare the whole fingerprint. Finding a different key with the same full
+digest is infeasible, but generating keys until a short prefix or suffix
+matches is cheap; the
+[cost table](./crypto-hashes.md#compare-the-whole-fingerprint) shows how
+cheap. A fingerprint is also only as trustworthy as the channel that delivered
+the reference value.
+
+Keep the representations apart:
+
+```mermaid
+flowchart TD
+    Material["Public key material"] --> Blob["SSH binary public-key blob<br/>algorithm name + key fields"]
+    Blob --> Fingerprint["Hash and display encoding<br/>for human comparison"]
+    Blob --> File["Public-key file encoding<br/>for storage or exchange"]
+    Blob --> Wire["Length-prefixed SSH string<br/>inside protocol messages"]
+```
+
+[RFC 4716](https://www.rfc-editor.org/rfc/rfc4716.html) defines a public-key
+file format framed by `BEGIN SSH2 PUBLIC KEY` and `END SSH2 PUBLIC KEY`, and
+OpenSSH uses its own one-line format. Both are storage formats containing
+Base64 text; neither is what appears on the wire as `K_S`.
+
 ## Trust models
 
 ### Pre-provisioned host keys
@@ -204,36 +234,6 @@ flowchart LR
 A jump host relays bytes toward the final server; it does not replace
 verification of the final server. Each SSH connection has its own peer and
 its own trust decision.
-
-## Fingerprints and key formats
-
-A [fingerprint](./crypto-hashes.md#fingerprints) is a short digest of a public
-key blob. OpenSSH's default form, `SHA256:` followed by Base64, names the hash
-and encodes its output. It is convenient for comparing keys over a human
-channel, but it is not an identity by itself: the trusted statement must bind
-it to a hostname or host role.
-
-Compare the whole fingerprint. Finding a different key with the same full
-digest is infeasible, but generating keys until a short prefix or suffix
-matches is cheap; the
-[cost table](./crypto-hashes.md#compare-the-whole-fingerprint) shows how
-cheap. A fingerprint is also only as trustworthy as the channel that delivered
-the reference value.
-
-Keep the representations apart:
-
-```mermaid
-flowchart TD
-    Material["Public key material"] --> Blob["SSH binary public-key blob<br/>algorithm name + key fields"]
-    Blob --> Fingerprint["Hash and display encoding<br/>for human comparison"]
-    Blob --> File["Public-key file encoding<br/>for storage or exchange"]
-    Blob --> Wire["Length-prefixed SSH string<br/>inside protocol messages"]
-```
-
-[RFC 4716](https://www.rfc-editor.org/rfc/rfc4716.html) defines a public-key
-file format framed by `BEGIN SSH2 PUBLIC KEY` and `END SSH2 PUBLIC KEY`, and
-OpenSSH uses its own one-line format. Both are storage formats containing
-Base64 text; neither is what appears on the wire as `K_S`.
 
 ## Host-key changes
 

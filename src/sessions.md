@@ -88,61 +88,6 @@ quoting decides which bytes reach the SSH client in the first place. These are
 two rounds of interpretation, and SSH provides no escaping between them. See
 the [`sshd(8)` login process](https://man.archlinux.org/man/sshd.8#LOGIN_PROCESS).
 
-## A PTY changes the byte-stream environment
-
-`pty-req` asks the server to attach the program to a pseudo-terminal:
-
-```text
-string "pty-req"
-boolean want_reply
-string terminal type (TERM value, e.g. "xterm-256color")
-uint32 columns
-uint32 rows
-uint32 pixel width
-uint32 pixel height
-string encoded terminal modes
-```
-
-Zero dimensions are ignored, and nonzero character dimensions override pixel
-dimensions. Without a PTY, a session is plain input, output, and error streams.
-With one, the remote line discipline can echo input, translate bytes, turn
-control characters into signals, and merge output streams. Binary protocols and
-machine-readable commands should not request a PTY.
-
-The terminal-mode string is its own compact encoding, not a native `termios`
-structure. It is a sequence of one-byte opcodes, each followed by a `uint32`
-argument for opcodes 1–159, ending with `TTY_OP_END` (0). Opcodes follow POSIX
-names: control characters such as `VINTR` (1), flags such as `ECHO` (53), and
-line speeds `TTY_OP_ISPEED`/`TTY_OP_OSPEED` (128/129). The client sends the
-modes it knows; the server ignores those it does not.
-
-```text
-01 00 00 00 03    VINTR = 3 (Ctrl-C)
-35 00 00 00 01    ECHO = 1 (on)
-80 00 00 96 00    TTY_OP_ISPEED = 38400
-00                TTY_OP_END
-```
-
-Three other requests concern terminals:
-
-- `window-change` carries new dimensions when the local terminal is resized,
-  always with `want reply` false. It is unrelated to
-  `SSH_MSG_CHANNEL_WINDOW_ADJUST`: one describes a display, the other data
-  credit.
-- `xon-xoff` flows from server to client. It tells the client whether it may
-  handle Ctrl-S/Ctrl-Q locally for faster response; the client may ignore it.
-- `break` ([RFC 4335](https://www.rfc-editor.org/rfc/rfc4335.html)) asks for a
-  BREAK of a given length in milliseconds, which matters when the session ends
-  at a serial console. The server replies success only if it sent a BREAK.
-
-## Environment requests are policy requests
-
-An `env` request carries a name and a value. It asks the server to add them to
-the new program's environment; it does not change the SSH transport or the
-server process. Servers often accept only configured names (OpenSSH's
-`AcceptEnv`), because variables that affect library loading, command lookup,
-or configuration cross a privilege boundary.
-
 ## Data and extended data
 
 The client sends program input as `SSH_MSG_CHANNEL_DATA`. The server sends
@@ -207,6 +152,61 @@ limits, so no `WINDOW_ADJUST` is needed. Other orderings are valid: `cat` may
 echo before the client's EOF, and the exit report may precede the server's
 EOF. The events stay distinct either way.
 
+## A PTY changes the byte-stream environment
+
+`pty-req` asks the server to attach the program to a pseudo-terminal:
+
+```text
+string "pty-req"
+boolean want_reply
+string terminal type (TERM value, e.g. "xterm-256color")
+uint32 columns
+uint32 rows
+uint32 pixel width
+uint32 pixel height
+string encoded terminal modes
+```
+
+Zero dimensions are ignored, and nonzero character dimensions override pixel
+dimensions. Without a PTY, a session is plain input, output, and error streams.
+With one, the remote line discipline can echo input, translate bytes, turn
+control characters into signals, and merge output streams. Binary protocols and
+machine-readable commands should not request a PTY.
+
+The terminal-mode string is its own compact encoding, not a native `termios`
+structure. It is a sequence of one-byte opcodes, each followed by a `uint32`
+argument for opcodes 1–159, ending with `TTY_OP_END` (0). Opcodes follow POSIX
+names: control characters such as `VINTR` (1), flags such as `ECHO` (53), and
+line speeds `TTY_OP_ISPEED`/`TTY_OP_OSPEED` (128/129). The client sends the
+modes it knows; the server ignores those it does not.
+
+```text
+01 00 00 00 03    VINTR = 3 (Ctrl-C)
+35 00 00 00 01    ECHO = 1 (on)
+80 00 00 96 00    TTY_OP_ISPEED = 38400
+00                TTY_OP_END
+```
+
+Three other requests concern terminals:
+
+- `window-change` carries new dimensions when the local terminal is resized,
+  always with `want reply` false. It is unrelated to
+  `SSH_MSG_CHANNEL_WINDOW_ADJUST`: one describes a display, the other data
+  credit.
+- `xon-xoff` flows from server to client. It tells the client whether it may
+  handle Ctrl-S/Ctrl-Q locally for faster response; the client may ignore it.
+- `break` ([RFC 4335](https://www.rfc-editor.org/rfc/rfc4335.html)) asks for a
+  BREAK of a given length in milliseconds, which matters when the session ends
+  at a serial console. The server replies success only if it sent a BREAK.
+
+## Environment requests are policy requests
+
+An `env` request carries a name and a value. It asks the server to add them to
+the new program's environment; it does not change the SSH transport or the
+server process. Servers often accept only configured names (OpenSSH's
+`AcceptEnv`), because variables that affect library loading, command lookup,
+or configuration cross a privilege boundary.
+
 ## Subsystems
 
 A subsystem is a named protocol carried in a session channel. After a
@@ -243,9 +243,9 @@ recognizable handshake, as SFTP's version exchange does.
 
 1. A client receives `OPEN_CONFIRMATION` for a session. Is a program running?
 2. How many arguments does the server see in `exec("ls 'my dir'")`?
-3. Why should a script that parses command output avoid requesting a PTY?
-4. What does `window-change` have to do with `WINDOW_ADJUST`?
-5. A command's channel closes without `exit-status`. What was the exit code?
+3. A command's channel closes without `exit-status`. What was the exit code?
+4. Why should a script that parses command output avoid requesting a PTY?
+5. What does `window-change` have to do with `WINDOW_ADJUST`?
 6. Why is SFTP called a subsystem rather than a channel type?
 
 <details>
@@ -256,12 +256,12 @@ recognizable handshake, as SFTP's version exchange does.
 2. SSH does not say. The request carries one string; the server decides how to
    split it. OpenSSH's server hands it to the user's shell, which would see
    `ls` and `my dir`.
-3. A PTY can echo input, translate line endings, interpret control characters,
-   and merge stderr into stdout, all of which alter the byte stream.
-4. Nothing. `window-change` reports terminal dimensions; `WINDOW_ADJUST` grants
-   flow-control credit.
-5. Unknown. Exit reports are recommended but optional, and neither CLOSE nor a
+3. Unknown. Exit reports are recommended but optional, and neither CLOSE nor a
    TCP EOF implies a status.
+4. A PTY can echo input, translate line endings, interpret control characters,
+   and merge stderr into stdout, all of which alter the byte stream.
+5. Nothing. `window-change` reports terminal dimensions; `WINDOW_ADJUST` grants
+   flow-control credit.
 6. It runs inside an ordinary `session` channel, started by a `subsystem`
    request; SSH carries its packets as channel data without interpreting them.
 

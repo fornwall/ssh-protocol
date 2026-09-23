@@ -92,7 +92,7 @@ diagnosis.
 
 A cryptography part explains the primitives SSH relies on: hashes, MACs, and
 key derivation; symmetric packet protection; Diffie–Hellman and elliptic-curve
-key agreement; digital signatures; and post-quantum key exchange. Each chapter
+key agreement; post-quantum key exchange; and digital signatures. Each chapter
 presents its primitive as a black box first, with optional collapsible
 “Go deeper” sections for the underlying math. A glossary and a reference map
 close the guide.

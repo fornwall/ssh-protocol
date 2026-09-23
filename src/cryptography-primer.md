@@ -54,6 +54,63 @@ To reason about the protocol, a client needs to know which box is used
 where and which failure result must stop the connection, not the internal
 mathematics.
 
+## Randomness
+
+Every secret in SSH starts as output from a cryptographically secure
+pseudo-random number generator (CSPRNG), usually provided by the operating
+system and seeded from hardware events and other entropy sources:
+
+```text
+RANDOM(n) -> n bytes that an attacker cannot predict,
+             even after seeing all earlier outputs
+```
+
+Long-term host and user keys come from it, and so does much of each
+connection:
+
+- The **`KEXINIT` cookie** is 16 random bytes. RFC 4253 says it makes it
+  impossible for either side to fully determine the keys and the session
+  identifier: both cookies enter the exchange hash, so each peer contributes
+  randomness to `H`.
+- **Ephemeral private values** are the root of the shared secret. If they
+  are predictable, a passive observer can compute `K` and read everything.
+- **KEM encapsulation** draws randomness to choose the encapsulated secret.
+- **Padding** should be random so that it does not leak structure.
+- **ECDSA signatures** need a fresh secret nonce each time; reusing one
+  reveals the private key. Ed25519 derives its nonce from the key and
+  message instead; see [ECDSA](./crypto-signatures.md#ecdsa).
+
+A bad generator produces no errors, only keys that look normal and are
+silently guessable. The protocol cannot detect this from the outside, which
+is why [RFC 4251, section 9.1](https://www.rfc-editor.org/rfc/rfc4251#section-9.1)
+singles out random-number quality.
+
+<details>
+<summary>Go deeper: when randomness fails</summary>
+
+A key is only as strong as the number of states its generator could have
+been in. If the generator could start in only 2ˢ states, an attacker
+enumerates them and regenerates every possible key: the security level is s
+bits, whatever the key length.
+
+**Debian OpenSSL, 2008.** A change to Debian's OpenSSL package left the
+generator seeded essentially by the process ID alone. Each architecture, key
+type, and key size could produce only 32,767 distinct key pairs—about 15
+bits of security—and attackers generated all of them. Every affected SSH
+host and user key had to be regenerated. Because DSA signatures also consume
+per-signature randomness, even a well-generated DSA key counted as
+compromised if it had been *used* on an affected machine. See
+[Debian Security Advisory DSA-1571](https://www.debian.org/security/2008/dsa-1571)
+and the [Debian wiki summary](https://wiki.debian.org/SSLkeys).
+
+Learn more:
+
+- [RFC 4086 — Randomness Requirements for Security](https://www.rfc-editor.org/rfc/rfc4086)
+- [Wikipedia: Cryptographically secure pseudorandom number generator](https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator)
+- [Wikipedia: Random number generator attack](https://en.wikipedia.org/wiki/Random_number_generator_attack)
+
+</details>
+
 ## One connection's cryptography
 
 Three diagrams follow one connection from its first random byte to
@@ -257,78 +314,21 @@ Learn more:
 
 </details>
 
-## Randomness
-
-Every secret in SSH starts as output from a cryptographically secure
-pseudo-random number generator (CSPRNG), usually provided by the operating
-system and seeded from hardware events and other entropy sources:
-
-```text
-RANDOM(n) -> n bytes that an attacker cannot predict,
-             even after seeing all earlier outputs
-```
-
-Long-term host and user keys come from it, and so does much of each
-connection:
-
-- The **`KEXINIT` cookie** is 16 random bytes. RFC 4253 says it makes it
-  impossible for either side to fully determine the keys and the session
-  identifier: both cookies enter the exchange hash, so each peer contributes
-  randomness to `H`.
-- **Ephemeral private values** are the root of the shared secret. If they
-  are predictable, a passive observer can compute `K` and read everything.
-- **KEM encapsulation** draws randomness to choose the encapsulated secret.
-- **Padding** should be random so that it does not leak structure.
-- **ECDSA signatures** need a fresh secret nonce each time; reusing one
-  reveals the private key. Ed25519 derives its nonce from the key and
-  message instead; see [ECDSA](./crypto-signatures.md#ecdsa).
-
-A bad generator produces no errors, only keys that look normal and are
-silently guessable. The protocol cannot detect this from the outside, which
-is why [RFC 4251, section 9.1](https://www.rfc-editor.org/rfc/rfc4251#section-9.1)
-singles out random-number quality.
-
-<details>
-<summary>Go deeper: when randomness fails</summary>
-
-A key is only as strong as the number of states its generator could have
-been in. If the generator could start in only 2ˢ states, an attacker
-enumerates them and regenerates every possible key: the security level is s
-bits, whatever the key length.
-
-**Debian OpenSSL, 2008.** A change to Debian's OpenSSL package left the
-generator seeded essentially by the process ID alone. Each architecture, key
-type, and key size could produce only 32,767 distinct key pairs—about 15
-bits of security—and attackers generated all of them. Every affected SSH
-host and user key had to be regenerated. Because DSA signatures also consume
-per-signature randomness, even a well-generated DSA key counted as
-compromised if it had been *used* on an affected machine. See
-[Debian Security Advisory DSA-1571](https://www.debian.org/security/2008/dsa-1571)
-and the [Debian wiki summary](https://wiki.debian.org/SSLkeys).
-
-Learn more:
-
-- [RFC 4086 — Randomness Requirements for Security](https://www.rfc-editor.org/rfc/rfc4086)
-- [Wikipedia: Cryptographically secure pseudorandom number generator](https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator)
-- [Wikipedia: Random number generator attack](https://en.wikipedia.org/wiki/Random_number_generator_attack)
-
-</details>
-
 ## Check your understanding
 
 1. Which two components together supply server authenticity, and which of
    them is not cryptography?
 2. A design uses a plain hash of each packet to detect tampering. Which box
    should it use instead, and why?
-3. What does the `sha256` in `curve25519-sha256` select, and why can you not
+3. Why can a predictable random generator break SSH even when every
+   algorithm is strong and every check passes?
+4. After a rekey, which of these change: host key, `session_id`, traffic
+   keys?
+5. What does the `sha256` in `curve25519-sha256` select, and why can you not
    infer the same role for `sha256` in another name?
-4. A connection uses `aes256-gcm@openssh.com` and
+6. A connection uses `aes256-gcm@openssh.com` and
    `diffie-hellman-group14-sha256`. Roughly what security level does it
    offer, and why?
-5. Why can a predictable random generator break SSH even when every
-   algorithm is strong and every check passes?
-6. After a rekey, which of these change: host key, `session_id`, traffic
-   keys?
 
 <details>
 <summary>Answers</summary>
@@ -338,17 +338,17 @@ Learn more:
    decision, not a cryptographic computation.
 2. A MAC (or an AEAD tag), keyed per direction. A hash has no secret, so an
    attacker who modifies a packet can recompute its hash.
-3. It selects SHA-256 as the method's `HASH`, used for the exchange hash and
+3. Ephemeral private values, and therefore `K`, become guessable. An observer
+   can recompute the traffic keys. Every verification still succeeds because
+   the protocol runs correctly with guessable inputs.
+4. Only the traffic keys. The host key is long-lived, and `session_id` stays
+   equal to the first exchange hash for the whole connection.
+5. It selects SHA-256 as the method's `HASH`, used for the exchange hash and
    key derivation. Names are opaque identifiers; each specification defines
    what its parts mean, so the same word can play a different role
    elsewhere.
-4. About 112 bits. The 2048-bit group establishes the key, and it is the
+6. About 112 bits. The 2048-bit group establishes the key, and it is the
    weakest necessary component.
-5. Ephemeral private values, and therefore `K`, become guessable. An observer
-   can recompute the traffic keys. Every verification still succeeds because
-   the protocol runs correctly with guessable inputs.
-6. Only the traffic keys. The host key is long-lived, and `session_id` stays
-   equal to the first exchange hash for the whole connection.
 
 </details>
 
