@@ -1,0 +1,93 @@
+/* SSH key-derivation calculator (kdf.js). */
+.w-kdf .w-kdf-hex {
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    font-size: 0.9em;
+}
+
+.w-kdf textarea {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+.w-kdf input[type="text"],
+.w-kdf select {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.w-kdf .w-kdf-label {
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.w-kdf .w-kdf-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35em;
+    margin: 0.6em 0;
+}
+
+.w-kdf .w-kdf-row {
+    display: flex;
+    gap: 0.6em;
+    align-items: flex-start;
+    padding: 0.35em 0.5em;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: var(--bg);
+}
+
+.w-kdf .w-kdf-row.w-kdf-selected {
+    border-color: var(--links);
+}
+
+.w-kdf .w-kdf-unused .w-kdf-hex {
+    opacity: 0.5;
+}
+
+.w-kdf .w-kdf-body {
+    min-width: 0;
+    flex: 1;
+}
+
+.w-kdf .w-kdf-letter {
+    flex: none;
+    min-width: 2.2em;
+    font-weight: bold;
+}
+
+.w-kdf .w-kdf-sep {
+    opacity: 0.6;
+}
+
+.w-kdf .w-kdf-legend span {
+    display: inline-block;
+    margin: 0.15em 0.3em 0.15em 0;
+    padding: 0 0.35em;
+    border-radius: 2px;
+    color: var(--fg);
+}
+
+.w-kdf .w-kdf-detail .w-title {
+    margin-top: 0.8em;
+}
+
+.w-kdf .w-kdf-formula {
+    margin: 0.7em 0 0.3em;
+    font-weight: bold;
+}
+
+/* A thin rule marks where each hashed field starts. */
+.w-kdf .w-byte.w-kdf-start {
+    box-shadow: inset 2px 0 0 var(--fg);
+}
+
+.w-kdf .w-kdf-detail p.w-kdf-hex {
+    margin: 0.3em 0;
+}
+
+.w-kdf input:disabled {
+    opacity: 0.5;
+}

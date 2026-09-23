@@ -465,6 +465,20 @@ derives all six values at one common length. See
 [ChaCha20-Poly1305](./crypto-symmetric.md#chacha20-poly1305) and
 [AES-GCM](./crypto-symmetric.md#aes-gcm) for how the values are used.
 
+The calculator below runs the derivation with real SHA-256. It starts from
+the toy inputs used under "why derive separate keys" below, `K = 5` and `H`
+= 32 bytes of `0x11`: pick a row of the table to see which letters need a
+second block, select a letter to see exactly which bytes are hashed, and
+switch to "After a rekey" to see every value change while `session_id`
+stays the same.
+
+<div class="ssh-widget" data-widget="kdf">
+<p class="w-fallback">Interactive figure: an SSH key-derivation calculator
+that derives the six values A–F from K, H, and session_id with SHA-256,
+shows the bytes hashed for each block, and simulates a rekey. It needs
+JavaScript; the toy example below lists the same values.</p>
+</div>
+
 <details>
 <summary>Go deeper: why derive separate keys at all</summary>
 
