@@ -4,11 +4,6 @@
     --w-flow-unread: rgba(245, 166, 35, 0.75);
 }
 
-/* .w-controls sets display, which would otherwise override [hidden]. */
-.w-flow [hidden] {
-    display: none !important;
-}
-
 .w-flow .w-flow-channels {
     grid-template-columns: repeat(auto-fit, minmax(17em, 1fr));
 }

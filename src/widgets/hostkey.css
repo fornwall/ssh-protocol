@@ -1,8 +1,4 @@
 /* Host-key decision explorer (hostkey.js). */
-.w-hostkey .w-field[hidden] {
-    display: none;
-}
-
 .w-hostkey select {
     width: 100%;
     max-width: 100%;

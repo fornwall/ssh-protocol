@@ -22,6 +22,11 @@
     overflow-x: auto;
 }
 
+/* Component rules below set display, which would otherwise override [hidden]. */
+.ssh-widget [hidden] {
+    display: none !important;
+}
+
 .ssh-widget .w-title {
     margin: 0 0 0.6em;
     font-weight: bold;
