@@ -1,0 +1,159 @@
+/* Channel flow-control simulator (flow.js). */
+.w-flow {
+    --w-flow-credit: rgba(46, 184, 92, 0.75);
+    --w-flow-unread: rgba(245, 166, 35, 0.75);
+}
+
+/* .w-controls sets display, which would otherwise override [hidden]. */
+.w-flow [hidden] {
+    display: none !important;
+}
+
+.w-flow .w-flow-channels {
+    grid-template-columns: repeat(auto-fit, minmax(17em, 1fr));
+}
+
+.w-flow .w-flow-channel {
+    padding: 0.6em 0.7em;
+    border: 1px solid var(--quote-border);
+    border-radius: 5px;
+    background: var(--bg);
+    min-width: 0;
+}
+
+.w-flow .w-flow-active {
+    border-color: var(--links);
+    box-shadow: inset 0 0 0 1px var(--links);
+}
+
+.w-flow .w-flow-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.3em 0.6em;
+}
+
+.w-flow .w-flow-badge {
+    padding: 0.05em 0.45em;
+    border-radius: 3px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.w-flow .w-flow-state {
+    margin: 0.3em 0 0.5em;
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+.w-flow .w-flow-dir {
+    margin-top: 0.5em;
+}
+
+.w-flow .w-flow-dir-label {
+    font-size: 0.9em;
+}
+
+.w-flow .w-flow-cells {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    margin: 0.25em 0;
+}
+
+.w-flow .w-flow-cell {
+    width: 0.95em;
+    height: 0.95em;
+    border-radius: 2px;
+    border: 1px solid var(--quote-border);
+}
+
+.w-flow .w-flow-credit {
+    background: var(--w-flow-credit);
+}
+
+.w-flow .w-flow-unread {
+    background: var(--w-flow-unread);
+}
+
+.w-flow .w-flow-flag {
+    margin-left: 0.4em;
+    padding: 0 0.35em;
+    border: 1px solid var(--quote-border);
+    border-radius: 3px;
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+
+.w-flow .w-flow-nums {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.1em 0.9em;
+    font-size: 0.85em;
+}
+
+.w-flow .w-flow-logtitle {
+    margin: 1em 0 0.3em;
+    font-weight: bold;
+}
+
+.w-flow .w-flow-logbox {
+    max-height: 16em;
+    overflow-y: auto;
+    border: 1px solid var(--quote-border);
+    border-radius: 4px;
+    background: var(--bg);
+}
+
+.w-flow .w-flow-log {
+    overflow-wrap: break-word;
+    margin: 0;
+    padding: 0.3em 0.5em 0.3em 2.6em;
+    font-size: 0.88em;
+}
+
+.w-flow .w-flow-log li {
+    padding: 0.2em 0;
+    border-bottom: 1px dashed var(--quote-border);
+}
+
+.w-flow .w-flow-log li:last-child {
+    border-bottom: 0;
+}
+
+.w-flow .w-flow-log li > span {
+    margin-right: 0.2em;
+}
+
+.w-flow .w-flow-last {
+    font-weight: bold;
+}
+
+.w-flow .w-flow-arrow {
+    font-family: var(--mono-font, monospace);
+    white-space: pre;
+}
+
+.w-flow .w-flow-field + .w-flow-field::before {
+    content: ", ";
+}
+
+.w-flow .w-flow-recipient strong {
+    padding: 0 0.15em;
+    border-bottom: 2px solid var(--links);
+}
+
+.w-flow .w-controls label {
+    white-space: nowrap;
+}
+
+.w-flow input[type="number"] {
+    width: 4.5em;
+}
+
+@media print {
+    .w-flow .w-flow-logbox {
+        max-height: none;
+    }
+}

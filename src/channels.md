@@ -253,6 +253,19 @@ At each step, record the recipient channel number and both directional window
 values. Exhausting the first channel's credit leaves the second channel's
 credit untouched, though a shared TCP stall could still delay both.
 
+To check your trace, step through one possible run below. Channel A reuses the
+numbers from this chapter: client `7`, server `42`, and a 10-byte window that
+drains as 6 + 4 bytes and is replenished by 8. Free play continues from the
+current step and refuses anything RFC 4254 forbids, such as exceeding the
+window or maximum packet size, or sending data after EOF.
+
+<div class="ssh-widget" data-widget="flow">
+<p class="w-fallback">Interactive figure: two channels (client 7 ↔ server 42
+and client 8 ↔ server 51) share one transport. It steps through the lab
+above, showing each message's recipient channel and the remaining window in
+both directions of each channel.</p>
+</div>
+
 ## Check your understanding
 
 1. A client numbers a channel `3`; the server numbers it `9`. Which number does
