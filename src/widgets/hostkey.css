@@ -1,0 +1,105 @@
+/* Host-key decision explorer (hostkey.js). */
+.w-hostkey .w-field[hidden] {
+    display: none;
+}
+
+.w-hostkey select {
+    width: 100%;
+    max-width: 100%;
+}
+
+.w-hostkey .hk-presets button {
+    font-size: 0.9em;
+}
+
+.w-hostkey .hk-check {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4em;
+    margin: 0.6em 0 0.4em;
+    font-size: 0.9em;
+}
+
+.w-hostkey .hk-sub {
+    margin: 0.8em 0 0.3em;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.w-hostkey pre.hk-lines,
+.w-hostkey pre.hk-prints {
+    margin: 0;
+    padding: 0.5em 0.7em;
+    border: 1px solid var(--quote-border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 0.8em;
+    line-height: 1.45;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+.w-hostkey pre.hk-lines {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.w-hostkey .hk-trace {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.w-hostkey .hk-trace li {
+    display: flex;
+    gap: 0.6em;
+    margin: 0.25em 0;
+    padding: 0.3em 0.6em;
+    border-left: 4px solid transparent;
+    border-radius: 3px;
+}
+
+.w-hostkey .hk-mark {
+    flex: none;
+    width: 1.1em;
+    text-align: center;
+    font-weight: bold;
+}
+
+.w-hostkey .hk-pass .hk-mark { color: var(--w-good); }
+.w-hostkey .hk-fail .hk-mark { color: var(--w-bad); }
+.w-hostkey .hk-fire {
+    border-left-color: var(--links);
+    background: var(--bg);
+}
+.w-hostkey .hk-fire .hk-mark { color: var(--links); }
+.w-hostkey .hk-skip { opacity: 0.5; }
+
+.w-hostkey .hk-verdict {
+    margin: 0.1em 0 0.2em;
+    font-weight: bold;
+    font-size: 1.05em;
+}
+
+.w-hostkey .hk-facts {
+    margin: 0.6em 0 0.2em;
+}
+
+.w-hostkey .hk-facts dt {
+    margin-top: 0.5em;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.w-hostkey .hk-facts dd {
+    margin: 0.1em 0 0;
+}
+
+.w-hostkey .hk-facts code {
+    overflow-wrap: anywhere;
+}
+
+.w-hostkey .w-note {
+    margin: 0.3em 0 0;
+}

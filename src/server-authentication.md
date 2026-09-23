@@ -235,6 +235,42 @@ A jump host relays bytes toward the final server; it does not replace
 verification of the final server. Each SSH connection has its own peer and
 its own trust decision.
 
+### How OpenSSH decides
+
+OpenSSH's client makes the trust decision as soon as the key-exchange reply
+delivers `K_S`, before it verifies the signature over `H`; both must pass
+before user authentication starts. It combines the lookup with
+[`StrictHostKeyChecking`](https://man.archlinux.org/man/ssh_config.5#StrictHostKeyChecking),
+and a few of its rules are easy to miss:
+
+- A key listed in the
+  [`RevokedHostKeys`](https://man.archlinux.org/man/ssh_config.5#RevokedHostKeys)
+  file is refused in every mode. A key or CA on an `@revoked` line is refused
+  unless the mode is `no`.
+- A certificate that fails its checks is retried as a plain key. If no plain
+  entry matches, the ordinary new-key rules apply, so `accept-new` silently
+  records the bare key.
+- A recorded key that does not match counts as changed whatever its type. By
+  default the client proposes the algorithms of key types it has recorded
+  first, so this usually appears only when the server no longer offers any of
+  them.
+- With `no`, a changed or revoked key does not stop the connection, but the
+  client disables password and keyboard-interactive authentication, agent,
+  X11, port, and tunnel forwarding, and `UpdateHostKeys`. Public-key
+  authentication and the session still go ahead, and `known_hosts` is left
+  unchanged.
+
+The explorer below applies these rules to a connection to `db1.example.com`.
+Choose what the server presents, what `known_hosts` holds, and the policy, and
+follow the decision path to the messages OpenSSH 10 prints.
+
+<div class="ssh-widget" data-widget="hostkey">
+<p class="w-fallback">Interactive figure: choose a plain host key or a host
+certificate, the known_hosts state, and StrictHostKeyChecking, and see which
+rule decides, what ssh prints, and what the choice means for security. It
+needs JavaScript.</p>
+</div>
+
 ## Host-key changes
 
 A changed key can be legitimate: the host was rebuilt, an algorithm was
@@ -332,6 +368,11 @@ Situation 2 has valid cryptography but no valid identity. Situation 3 becomes
 safe only after the trust database is updated from verified information.
 Situation 4 is no better than an unverified first use: with `VerifyHostKeyDNS
 yes`, OpenSSH falls back to asking.
+
+To see what OpenSSH does in situations 1 to 3, use the
+[decision explorer](#how-openssh-decides): situation 1 is *This exact key*,
+situation 2 is *A different ssh-ed25519 key*, and situation 3 is the same
+change before the entry is updated. Try each `StrictHostKeyChecking` mode.
 
 ## Check your understanding
 
