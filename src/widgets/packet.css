@@ -1,0 +1,192 @@
+/* Packet dissector (widgets/packet.js). */
+.w-packet .pk-seq {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3em 0.6em;
+    margin: 0.8em 0 0.6em;
+    font-size: 0.9em;
+}
+
+.w-packet .pk-seq-label {
+    font-weight: bold;
+}
+
+.w-packet .pk-seq-bytes {
+    padding: 2px;
+    border: 1px dashed var(--quote-border);
+    border-radius: 4px;
+}
+
+.w-packet .pk-seq-bytes.pk-unused {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
+.w-packet .pk-seq-text {
+    flex: 1 1 16em;
+}
+
+.w-packet .pk-dump {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.3em;
+    margin: 0.6em 0;
+}
+
+.w-packet .pk-payload {
+    display: inline-flex;
+    flex-direction: column;
+    max-width: 100%;
+}
+
+.w-packet .pk-payload-fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.3em;
+}
+
+.w-packet .pk-bracket {
+    margin: 0 3px;
+    border: 1px solid var(--quote-border);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    font-size: 0.75em;
+    text-align: center;
+    opacity: 0.8;
+}
+
+/* One field: its bytes above a small caption. */
+.w-packet .pk-field {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    max-width: 100%;
+    padding: 3px;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    background: none;
+    text-align: left;
+}
+
+.w-packet .pk-field .w-bytes {
+    border-bottom: 3px solid transparent;
+    padding-bottom: 1px;
+}
+
+.w-packet .pk-field.is-auth .w-bytes {
+    border-bottom-color: var(--links);
+}
+
+.w-packet .pk-field.is-enc .w-byte,
+.w-packet .pk-enc-swatch {
+    background-image: repeating-linear-gradient(135deg,
+        transparent 0 4px,
+        color-mix(in srgb, currentColor 30%, transparent) 4px 5px);
+}
+
+.w-packet .pk-cap {
+    font-size: 0.75em;
+    opacity: 0.8;
+}
+
+.w-packet .pk-focus .pk-field {
+    opacity: 0.45;
+}
+
+.w-packet .pk-focus .pk-field.is-active,
+.w-packet .pk-focus .pk-field.is-outlined {
+    opacity: 1;
+}
+
+.w-packet .pk-field.is-outlined {
+    border-style: dashed;
+    border-color: var(--fg);
+}
+
+.w-packet .pk-field.is-active {
+    border-style: solid;
+    border-color: var(--links);
+}
+
+.w-packet .pk-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3em 0.5em;
+    font-size: 0.85em;
+}
+
+.w-packet .pk-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    padding: 0.15em 0.45em;
+}
+
+.w-packet .pk-key.is-active {
+    border-color: var(--links);
+}
+
+.w-packet .pk-static {
+    border: 1px solid transparent;
+}
+
+.w-packet .pk-swatch {
+    display: inline-block;
+    width: 1.1em;
+    height: 1.1em;
+    border-radius: 2px;
+}
+
+.w-packet .pk-enc-swatch {
+    border: 1px solid var(--quote-border);
+}
+
+.w-packet .pk-auth-swatch {
+    height: 3px;
+    background: var(--links);
+}
+
+.w-packet .pk-explain {
+    min-height: 3.2em;
+}
+
+.w-packet .pk-facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.25em 0.8em;
+    margin: 0.6em 0;
+    font-size: 0.9em;
+}
+
+.w-packet .pk-wide {
+    grid-column: 1 / -1;
+}
+
+.w-packet .pk-facts dt,
+.w-packet .pk-facts dd {
+    margin: 0;
+}
+
+.w-packet .pk-facts dt {
+    font-weight: bold;
+}
+
+@media (max-width: 520px) {
+    .w-packet .pk-facts {
+        grid-template-columns: 1fr;
+    }
+
+    .w-packet .pk-facts dd {
+        margin-bottom: 0.3em;
+    }
+}
+
+@media print {
+    .w-packet .pk-inputs {
+        display: none;
+    }
+}

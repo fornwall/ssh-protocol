@@ -273,6 +273,18 @@ aligned. A visible length may thus be an authenticated cleartext field in one
 mode and separately encrypted in another; in no mode is a boundary trusted
 merely because a tentative length was recovered.
 
+The dissector below starts from the [worked packet](#worked-packet). Point at
+a field to see what it holds and which bytes `packet_length` counts, then
+switch the protection family, block size, or message to see how padding,
+encryption, and authentication change.
+
+<div class="ssh-widget" data-widget="packet">
+<p class="w-fallback">Interactive figure: the worked packet as a color-coded
+hex dump, with the padding recomputed for each packet-protection family and
+the encrypted, authenticated, and cleartext bytes marked. It needs
+JavaScript.</p>
+</div>
+
 ### Compression changes payloads, not channels
 
 Compression applies to payloads before packet protection when sending and
