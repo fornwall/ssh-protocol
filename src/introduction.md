@@ -36,10 +36,8 @@ its companions define the
 
 ```mermaid
 sequenceDiagram
-    participant App as Client application
-    participant C as SSH client protocol
+    participant C as SSH client
     participant S as SSH server
-    App->>C: connect(host, user, command)
     C->>S: Open reliable byte stream
     C<<->>S: Identification lines
     C<<->>S: KEXINIT negotiation
@@ -53,7 +51,6 @@ sequenceDiagram
     C->>S: Request exec "command"
     C<<->>S: stdout, stderr, exit status
     C<<->>S: EOF and CLOSE
-    C-->>App: command result
 ```
 
 Key exchange delivers a host-key signature. The client combines it with a
