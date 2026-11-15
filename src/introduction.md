@@ -1,20 +1,15 @@
 # Introduction
 
-SSH is both an everyday command and a family of protocols. This guide takes
-the second view. It follows an SSH client from a newly opened byte stream to an
-authenticated, multiplexed connection that runs a command, and asks at each
-step what the client and server say, why the exchange exists, and where the
-protocol's security claims begin and end. It does not design new cryptography
-or teach how to build a client.
+This guide follows an SSH client step by step from a newly opened byte stream to an
+authenticated, multiplexed connection that runs a command.
 
 ## The three protocol layers
 
-SSH builds upward from a reliable, ordered byte stream. Each layer gives the
+SSH builds on a reliable, ordered byte stream - normally over TCP port 22. Each layer gives the
 next one a narrower and safer abstraction.
 
 ```mermaid
-flowchart BT
-    TCP["Reliable byte stream<br/>usually TCP port 22"] --> Transport
+flowchart TD
     Transport["Transport protocol<br/>key exchange · server identity · protected packets"] --> Auth
     Auth["User authentication<br/>public key · password · interactive methods"] --> Connection
     Connection["Connection protocol<br/>multiplexed, flow-controlled channels"] --> Uses
@@ -40,12 +35,13 @@ sequenceDiagram
     participant S as SSH server
     C->>S: Open reliable byte stream
     C<<->>S: Identification lines
+    Note over C,S: Packets are now binary
     C<<->>S: KEXINIT negotiation
     C<<->>S: Ephemeral key exchange
     S-->>C: Host key and signature
     C->>C: Verify server identity
     C<<->>S: NEWKEYS
-    Note over C,S: Packets are now protected
+    Note over C,S: Packets are now encrypted and integrity-protected
     C<<->>S: Authenticate user
     C<<->>S: Open session channel
     C->>S: Request exec "command"
